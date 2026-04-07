@@ -1,0 +1,128 @@
+import { NextRequest, NextResponse } from 'next/server'
+import Stripe from 'stripe'
+import { supabaseAdmin } from '@/lib/supabase'
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+
+export async function POST(req: NextRequest) {
+  try {
+    const {
+      chateauId, bundleId, visitDate, visitTime,
+      persons, language, guestEmail,
+      aiWineStyle, aiBudget, aiGroupType,
+      giftCardCode,
+    } = await req.json()
+
+    // 1. Fetch bundle to get price
+    // @ts-ignore
+    const { data: bundle, error: bundleErr } = await supabaseAdmin
+      .from('bundles')
+      .select('*, chateau:chateaux(slug)')
+      .eq('id', bundleId)
+      .single()
+    if (bundleErr || !bundle) {
+      return NextResponse.json({ error: 'Bundle not found' }, { status: 404 })
+    }
+
+    // 2. Check availability
+    const { data: slot } = await supabaseAdmin
+      .from('chateau_availability')
+      .select('*')
+      .eq('chateau_id', chateauId)
+      .eq('date', visitDate)
+      .eq('time_slot', visitTime)
+      .single()
+    if (slot && slot.booked_count >= slot.max_capacity) {
+      return NextResponse.json({ error: 'Slot fully booked' }, { status: 409 })
+    }
+
+    // 3. Calculate pricing
+    let pricePerPerson = bundle.price
+    let giftDiscount   = 0
+
+    if (giftCardCode) {
+      const { data: gc } = await supabaseAdmin
+        .from('gift_cards')
+        .select('*')
+        .eq('code', giftCardCode)
+        .eq('status', 'active')
+        .single()
+      if (gc) {
+        giftDiscount = Math.min(gc.amount - gc.amount_used, pricePerPerson * persons)
+      }
+    }
+
+    const totalBeforeDiscount = pricePerPerson * persons
+    const totalPrice  = Math.max(0, totalBeforeDiscount - giftDiscount)
+    const taxAmount   = Math.round(totalPrice * 0.10) // 10% TVA
+
+    // 4. Generate booking ref
+    const { data: refData } = await supabaseAdmin.rpc('generate_booking_ref', {
+      chateau_slug: (bundle.chateau as { slug: string }).slug,
+    })
+    const bookingRef = refData as string
+
+    // 5. Create Stripe Payment Intent
+    const paymentIntent = totalPrice > 0
+      ? await stripe.paymentIntents.create({
+          amount:   (totalPrice + taxAmount) * 100, // cents
+          currency: 'eur',
+          metadata: { bookingRef, chateauId, bundleId },
+        })
+      : null
+
+    // 6. Create booking record (status: pending)
+    const { data: booking, error: bookErr } = await supabaseAdmin
+      .from('bookings')
+      .insert({
+        booking_ref:           bookingRef,
+        guest_email:           guestEmail,
+        chateau_id:            chateauId,
+        bundle_id:             bundleId,
+        visit_date:            visitDate,
+        visit_time:            visitTime,
+        persons,
+        language:              language ?? 'en',
+        ai_wine_style:         aiWineStyle,
+        ai_budget:             aiBudget,
+        ai_group_type:         aiGroupType,
+        price_per_person:      pricePerPerson,
+        total_price:           totalPrice,
+        tax_amount:            taxAmount,
+        stripe_payment_intent: paymentIntent?.id ?? null,
+        status:                totalPrice === 0 ? 'confirmed' : 'pending',
+        cancellation_deadline: new Date(
+          new Date(visitDate + 'T' + visitTime).getTime() - 48 * 60 * 60 * 1000
+        ).toISOString(),
+      })
+      .select()
+      .single()
+
+    if (bookErr) throw bookErr
+
+    return NextResponse.json({
+      bookingRef,
+      bookingId: booking.id,
+      clientSecret: paymentIntent?.client_secret ?? null,
+      totalPrice,
+      taxAmount,
+    })
+  } catch (err) {
+    console.error('[Booking Error]', err)
+    return NextResponse.json({ error: 'Booking failed' }, { status: 500 })
+  }
+}
+
+export async function GET(req: NextRequest) {
+  const ref = req.nextUrl.searchParams.get('ref')
+  if (!ref) return NextResponse.json({ error: 'ref required' }, { status: 400 })
+
+  const { data } = await supabaseAdmin
+    .from('bookings')
+    .select('*, chateau:chateaux(*), bundle:bundles(*)')
+    .eq('booking_ref', ref)
+    .single()
+
+  if (!data) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  return NextResponse.json(data)
+}
