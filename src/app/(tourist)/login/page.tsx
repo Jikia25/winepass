@@ -26,6 +26,8 @@ export default function LoginPage() {
   const [loading, setLoading]     = useState(false)
   const [error, setError]         = useState('')
   const [success, setSuccess]     = useState('')
+  const [showPass, setShowPass] = useState(false)
+  const [showPass2, setShowPass2] = useState(false)
   const [redirectTo, setRedirectTo] = useState('/')
 
   useEffect(() => {
@@ -197,12 +199,26 @@ export default function LoginPage() {
             <h2 className="font-serif text-[15px] font-medium text-[#1C0A0A] mb-1">ახალი პაროლი</h2>
             <p className="text-[11px] text-[#8B6B6B] mb-4">შეიყვანე ახალი პაროლი ორჯერ.</p>
             <label className="block text-[9px] font-medium text-[#8B6B6B] uppercase tracking-wider mb-1">ახალი პაროლი</label>
-            <input type="password" value={password} onChange={e => setPass(e.target.value)} placeholder="••••••••"
-              className="w-full border border-[#DDD0B3] rounded-lg px-3 py-2.5 text-[12px] mb-2 outline-none focus:border-[#5C1A1A]" />
+            <div className="relative mb-2">
+              <input type={showPass ? "text" : "password"} value={password} onChange={e => setPass(e.target.value)} placeholder="••••••••"
+                className="w-full border border-[#DDD0B3] rounded-lg px-3 py-2.5 text-[12px] pr-9 outline-none focus:border-[#5C1A1A]" />
+              <button type="button" onClick={() => setShowPass(!showPass)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8B6B6B]">
+                {showPass ? <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                : <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
+              </button>
+            </div>
             {password && <PwHint />}
             <label className="block text-[9px] font-medium text-[#8B6B6B] uppercase tracking-wider mb-1">გაიმეორე პაროლი</label>
-            <input type="password" value={password2} onChange={e => setPass2(e.target.value)} placeholder="••••••••"
-              className="w-full border border-[#DDD0B3] rounded-lg px-3 py-2.5 text-[12px] mb-4 outline-none focus:border-[#5C1A1A]" />
+            <div className="relative mb-4">
+              <input type={showPass2 ? "text" : "password"} value={password2} onChange={e => setPass2(e.target.value)} placeholder="••••••••"
+                className="w-full border border-[#DDD0B3] rounded-lg px-3 py-2.5 text-[12px] pr-9 outline-none focus:border-[#5C1A1A]" />
+              <button type="button" onClick={() => setShowPass2(!showPass2)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8B6B6B]">
+                {showPass2 ? <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                : <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
+              </button>
+            </div>
             {password2 && password !== password2 && (
               <p className="text-[10px] text-[#A32D2D] mb-3">პაროლები არ ემთხვევა</p>
             )}
@@ -266,8 +282,15 @@ export default function LoginPage() {
                   <button onClick={() => reset('forgot')} className="text-[9px] text-[#5C1A1A] hover:underline">დამავიწყდა პაროლი?</button>
                 )}
               </div>
-              <input type="password" value={password} onChange={e => setPass(e.target.value)} placeholder="••••••••"
-                className="w-full border border-[#DDD0B3] rounded-lg px-3 py-2.5 text-[12px] mb-2 outline-none focus:border-[#5C1A1A]" />
+              <div className="relative mb-2">
+                <input type={showPass ? "text" : "password"} value={password} onChange={e => setPass(e.target.value)} placeholder="••••••••"
+                  className="w-full border border-[#DDD0B3] rounded-lg px-3 py-2.5 text-[12px] pr-9 outline-none focus:border-[#5C1A1A]" />
+                <button type="button" onClick={() => setShowPass(!showPass)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8B6B6B]">
+                  {showPass ? <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                  : <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
+                </button>
+              </div>
               {stage==='register' && password && <PwHint />}
 
               {error   && <p className="text-[11px] text-[#A32D2D] bg-[#FCEBEB] rounded-lg px-3 py-2 mb-3">{error}</p>}
