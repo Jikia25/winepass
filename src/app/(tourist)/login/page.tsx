@@ -3,23 +3,42 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
-type Tab = 'login' | 'register' | 'forgot'
+type Stage = 'login' | 'register' | 'forgot' | 'verify-otp' | 'new-password'
+
+function validatePassword(p: string) {
+  return {
+    len:     p.length >= 8,
+    upper:   /[A-Z]/.test(p),
+    lower:   /[a-z]/.test(p),
+    digit:   /[0-9]/.test(p),
+    special: /[^A-Za-z0-9]/.test(p),
+  }
+}
 
 export default function LoginPage() {
   const router = useRouter()
-  const [tab, setTab]         = useState<Tab>('login')
-  const [email, setEmail]     = useState('')
-  const [password, setPass]   = useState('')
-  const [name, setName]       = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState('')
-  const [success, setSuccess] = useState('')
+  const [stage, setStage]         = useState<Stage>('login')
+  const [email, setEmail]         = useState('')
+  const [password, setPass]       = useState('')
+  const [password2, setPass2]     = useState('')
+  const [name, setName]           = useState('')
+  const [otp, setOtp]             = useState('')
+  const [loading, setLoading]     = useState(false)
+  const [error, setError]         = useState('')
+  const [success, setSuccess]     = useState('')
   const [redirectTo, setRedirectTo] = useState('/')
 
   useEffect(() => {
     const saved = sessionStorage.getItem('redirect_after_login')
     if (saved) setRedirectTo(saved)
   }, [])
+
+  const pv = validatePassword(password)
+  const pwOk = pv.len && pv.upper && pv.lower && pv.digit && pv.special
+
+  function reset(s: Stage) {
+    setStage(s); setError(''); setSuccess('')
+  }
 
   async function signInWithGoogle() {
     setLoading(true)
@@ -29,39 +48,92 @@ export default function LoginPage() {
     })
   }
 
-  async function handleEmail() {
-    if (!email) return
-    setLoading(true)
-    setError('')
-
-    if (tab === 'forgot') {
-      const { error: e } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/reset`,
-      })
-      if (e) setError(e.message)
-      else setSuccess('პაროლის აღდგენის ლინკი გამოგზავნილია!')
-      setLoading(false)
-      return
-    }
-
-    if (!password) { setLoading(false); return }
-
-    if (tab === 'register') {
-      const { error: e } = await supabase.auth.signUp({
-        email, password,
-        options: { data: { full_name: name } }
-      })
-      if (e) { setError(e.message); setLoading(false) }
-      else { setSuccess('Email გამოგზავნილია! შეამოწმე inbox.'); setLoading(false) }
-    } else {
-      const { error: e } = await supabase.auth.signInWithPassword({ email, password })
-      if (e) { setError('Email ან პაროლი არასწორია'); setLoading(false) }
-      else {
-        sessionStorage.removeItem('redirect_after_login')
-        router.push(redirectTo)
-      }
+  async function handleLogin() {
+    if (!email || !password) return
+    setLoading(true); setError('')
+    const { error: e } = await supabase.auth.signInWithPassword({ email, password })
+    if (e) { setError('Email ან პაროლი არასწორია'); setLoading(false) }
+    else {
+      sessionStorage.removeItem('redirect_after_login')
+      router.push(redirectTo)
     }
   }
+
+  async function handleRegister() {
+    if (!email || !pwOk) return
+    setLoading(true); setError('')
+    const { error: e } = await supabase.auth.signUp({
+      email, password,
+      options: { data: { full_name: name } }
+    })
+    setLoading(false)
+    if (e) {
+      if (e.message.toLowerCase().includes('already') || e.message.toLowerCase().includes('registered')) {
+        setError('ეს Email უკვე რეგისტრირებულია.')
+        setSuccess('')
+        setTimeout(() => { setEmail(email); reset('forgot') }, 1800)
+      } else {
+        setError(e.message)
+      }
+    } else {
+      setSuccess(`✉️ დადასტურების ლინკი გაიგზავნა ${email}-ზე. შეამოწმე Inbox (და Spam საქაღალდე).`)
+    }
+  }
+
+  async function handleForgot() {
+    if (!email) return
+    setLoading(true); setError('')
+    const { error: e } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/callback?next=/login`,
+    })
+    setLoading(false)
+    if (e) { setError(e.message) }
+    else {
+      setSuccess(`✉️ 6-ნიშნა კოდი გაიგზავნა ${email}-ზე.`)
+      setTimeout(() => reset('verify-otp'), 1500)
+    }
+  }
+
+  async function handleVerifyOtp() {
+    if (!otp || otp.length < 6) return
+    setLoading(true); setError('')
+    const { error: e } = await supabase.auth.verifyOtp({
+      email, token: otp, type: 'recovery'
+    })
+    setLoading(false)
+    if (e) { setError('კოდი არასწორია ან ვადა გაუვიდა. სცადე თავიდან.') }
+    else { reset('new-password') }
+  }
+
+  async function handleNewPassword() {
+    if (!pwOk) return
+    if (password !== password2) { setError('პაროლები არ ემთხვევა'); return }
+    setLoading(true); setError('')
+    const { error: e } = await supabase.auth.updateUser({ password })
+    setLoading(false)
+    if (e) { setError(e.message) }
+    else {
+      setSuccess('✅ პაროლი განახლდა! შედი ახალი პაროლით.')
+      setTimeout(() => { setPass(''); setPass2(''); reset('login') }, 2000)
+    }
+  }
+
+  const PwHint = () => (
+    <div className="grid grid-cols-2 gap-1 mb-3">
+      {[
+        [pv.len,     '8+ სიმბოლო'],
+        [pv.upper,   'დიდი ასო (A-Z)'],
+        [pv.lower,   'პატარა ასო (a-z)'],
+        [pv.digit,   'ციფრი (0-9)'],
+        [pv.special, 'სასვენი ნიშანი (!@#...)'],
+      ].map(([ok, label]) => (
+        <span key={label as string}
+          className={`text-[9px] flex items-center gap-1 ${ok ? 'text-green-600' : 'text-[#8B6B6B]'}`}>
+          {ok ? '✓' : '○'} {label}
+        </span>
+      ))}
+    </div>
+  )
 
   return (
     <div className="min-h-screen bg-[#FAF6EE] flex items-center justify-center px-4">
@@ -78,34 +150,81 @@ export default function LoginPage() {
           )}
         </div>
 
-        {tab === 'forgot' ? (
+        {/* ── FORGOT PASSWORD ── */}
+        {stage === 'forgot' && (
           <div className="bg-white border border-[#DDD0B3] rounded-xl p-5">
-            <button onClick={() => { setTab('login'); setError(''); setSuccess('') }}
-              className="text-[10px] text-[#5C1A1A] mb-4 flex items-center gap-1">
-              ← შესვლაზე დაბრუნება
-            </button>
+            <button onClick={() => reset('login')} className="text-[10px] text-[#5C1A1A] mb-4 flex items-center gap-1">← შესვლაზე დაბრუნება</button>
             <h2 className="font-serif text-[15px] font-medium text-[#1C0A0A] mb-1">პაროლის აღდგენა</h2>
-            <p className="text-[11px] text-[#8B6B6B] mb-4">შეიყვანე Email — გამოგიგზავნით ლინკს.</p>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-              placeholder="your@email.com"
+            <p className="text-[11px] text-[#8B6B6B] mb-4">შეიყვანე Email — გამოგიგზავნით 6-ნიშნა კოდს.</p>
+            <label className="block text-[9px] font-medium text-[#8B6B6B] uppercase tracking-wider mb-1">ელ-ფოსტა</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com"
               className="w-full border border-[#DDD0B3] rounded-lg px-3 py-2.5 text-[12px] mb-4 outline-none focus:border-[#5C1A1A]" />
             {error   && <p className="text-[11px] text-[#A32D2D] bg-[#FCEBEB] rounded-lg px-3 py-2 mb-3">{error}</p>}
             {success && <p className="text-[11px] text-[#2E6B3E] bg-[#EAF3DE] rounded-lg px-3 py-2 mb-3">{success}</p>}
-            <button onClick={handleEmail} disabled={loading || !email}
+            <button onClick={handleForgot} disabled={loading || !email}
               className={`w-full py-3 rounded-lg text-[12px] font-medium font-serif
                 ${email && !loading ? 'bg-[#5C1A1A] text-white' : 'bg-[#5C1A1A]/30 text-white/50 cursor-not-allowed'}`}>
-              {loading ? 'იგზავნება...' : 'ლინკის გაგზავნა →'}
+              {loading ? 'იგზავნება...' : 'კოდის გაგზავნა →'}
             </button>
           </div>
-        ) : (
+        )}
+
+        {/* ── VERIFY OTP ── */}
+        {stage === 'verify-otp' && (
+          <div className="bg-white border border-[#DDD0B3] rounded-xl p-5">
+            <button onClick={() => reset('forgot')} className="text-[10px] text-[#5C1A1A] mb-4 flex items-center gap-1">← უკან</button>
+            <h2 className="font-serif text-[15px] font-medium text-[#1C0A0A] mb-1">შეიყვანე კოდი</h2>
+            <p className="text-[11px] text-[#8B6B6B] mb-4">{email}-ზე გაგზავნილი 6-ნიშნა კოდი.</p>
+            <input type="text" value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g,'').slice(0,6))}
+              placeholder="123456" maxLength={6}
+              className="w-full border border-[#DDD0B3] rounded-lg px-3 py-2.5 text-[16px] text-center tracking-[0.3em] mb-4 outline-none focus:border-[#5C1A1A]" />
+            {error   && <p className="text-[11px] text-[#A32D2D] bg-[#FCEBEB] rounded-lg px-3 py-2 mb-3">{error}</p>}
+            <button onClick={handleVerifyOtp} disabled={loading || otp.length < 6}
+              className={`w-full py-3 rounded-lg text-[12px] font-medium font-serif
+                ${otp.length===6 && !loading ? 'bg-[#5C1A1A] text-white' : 'bg-[#5C1A1A]/30 text-white/50 cursor-not-allowed'}`}>
+              {loading ? 'მოწმდება...' : 'კოდის დადასტურება →'}
+            </button>
+            <button onClick={handleForgot} className="w-full text-center text-[10px] text-[#5C1A1A] mt-3 hover:underline">
+              კოდი არ მოვიდა? თავიდან გაგზავნა
+            </button>
+          </div>
+        )}
+
+        {/* ── NEW PASSWORD ── */}
+        {stage === 'new-password' && (
+          <div className="bg-white border border-[#DDD0B3] rounded-xl p-5">
+            <h2 className="font-serif text-[15px] font-medium text-[#1C0A0A] mb-1">ახალი პაროლი</h2>
+            <p className="text-[11px] text-[#8B6B6B] mb-4">შეიყვანე ახალი პაროლი ორჯერ.</p>
+            <label className="block text-[9px] font-medium text-[#8B6B6B] uppercase tracking-wider mb-1">ახალი პაროლი</label>
+            <input type="password" value={password} onChange={e => setPass(e.target.value)} placeholder="••••••••"
+              className="w-full border border-[#DDD0B3] rounded-lg px-3 py-2.5 text-[12px] mb-2 outline-none focus:border-[#5C1A1A]" />
+            {password && <PwHint />}
+            <label className="block text-[9px] font-medium text-[#8B6B6B] uppercase tracking-wider mb-1">გაიმეორე პაროლი</label>
+            <input type="password" value={password2} onChange={e => setPass2(e.target.value)} placeholder="••••••••"
+              className="w-full border border-[#DDD0B3] rounded-lg px-3 py-2.5 text-[12px] mb-4 outline-none focus:border-[#5C1A1A]" />
+            {password2 && password !== password2 && (
+              <p className="text-[10px] text-[#A32D2D] mb-3">პაროლები არ ემთხვევა</p>
+            )}
+            {error   && <p className="text-[11px] text-[#A32D2D] bg-[#FCEBEB] rounded-lg px-3 py-2 mb-3">{error}</p>}
+            {success && <p className="text-[11px] text-[#2E6B3E] bg-[#EAF3DE] rounded-lg px-3 py-2 mb-3">{success}</p>}
+            <button onClick={handleNewPassword} disabled={loading || !pwOk || password !== password2}
+              className={`w-full py-3 rounded-lg text-[12px] font-medium font-serif
+                ${pwOk && password===password2 && !loading ? 'bg-[#5C1A1A] text-white' : 'bg-[#5C1A1A]/30 text-white/50 cursor-not-allowed'}`}>
+              {loading ? 'ინახება...' : 'პაროლის განახლება →'}
+            </button>
+          </div>
+        )}
+
+        {/* ── LOGIN / REGISTER ── */}
+        {(stage === 'login' || stage === 'register') && (
           <>
             <div className="flex bg-white border border-[#DDD0B3] rounded-xl p-1 mb-4">
-              <button onClick={() => { setTab('login'); setError(''); setSuccess('') }}
+              <button onClick={() => reset('login')}
                 className={`flex-1 py-2 rounded-lg text-[12px] font-medium transition-all
-                  ${tab==='login' ? 'bg-[#5C1A1A] text-white' : 'text-[#8B6B6B]'}`}>შესვლა</button>
-              <button onClick={() => { setTab('register'); setError(''); setSuccess('') }}
+                  ${stage==='login' ? 'bg-[#5C1A1A] text-white' : 'text-[#8B6B6B]'}`}>შესვლა</button>
+              <button onClick={() => reset('register')}
                 className={`flex-1 py-2 rounded-lg text-[12px] font-medium transition-all
-                  ${tab==='register' ? 'bg-[#5C1A1A] text-white' : 'text-[#8B6B6B]'}`}>რეგისტრაცია</button>
+                  ${stage==='register' ? 'bg-[#5C1A1A] text-white' : 'text-[#8B6B6B]'}`}>რეგისტრაცია</button>
             </div>
 
             <div className="bg-white border border-[#DDD0B3] rounded-xl p-5">
@@ -119,7 +238,7 @@ export default function LoginPage() {
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
-                Google-ით {tab==='login' ? 'შესვლა' : 'რეგისტრაცია'}
+                Google-ით {stage==='login' ? 'შესვლა' : 'რეგისტრაცია'}
               </button>
 
               <div className="flex items-center gap-2 mb-4">
@@ -128,7 +247,7 @@ export default function LoginPage() {
                 <div className="flex-1 h-px bg-[#EDE4CF]" />
               </div>
 
-              {tab==='register' && (
+              {stage==='register' && (
                 <>
                   <label className="block text-[9px] font-medium text-[#8B6B6B] uppercase tracking-wider mb-1">სახელი</label>
                   <input value={name} onChange={e => setName(e.target.value)} placeholder="Ana Beridze"
@@ -142,25 +261,30 @@ export default function LoginPage() {
 
               <div className="flex justify-between items-center mb-1">
                 <label className="text-[9px] font-medium text-[#8B6B6B] uppercase tracking-wider">პაროლი</label>
-                {tab==='login' && (
-                  <button onClick={() => { setTab('forgot'); setError(''); setSuccess('') }}
-                    className="text-[9px] text-[#5C1A1A] hover:underline">დამავიწყდა პაროლი?</button>
+                {stage==='login' && (
+                  <button onClick={() => reset('forgot')} className="text-[9px] text-[#5C1A1A] hover:underline">დამავიწყდა პაროლი?</button>
                 )}
               </div>
               <input type="password" value={password} onChange={e => setPass(e.target.value)} placeholder="••••••••"
-                className="w-full border border-[#DDD0B3] rounded-lg px-3 py-2.5 text-[12px] mb-4 outline-none focus:border-[#5C1A1A]" />
+                className="w-full border border-[#DDD0B3] rounded-lg px-3 py-2.5 text-[12px] mb-2 outline-none focus:border-[#5C1A1A]" />
+              {stage==='register' && password && <PwHint />}
 
               {error   && <p className="text-[11px] text-[#A32D2D] bg-[#FCEBEB] rounded-lg px-3 py-2 mb-3">{error}</p>}
               {success && <p className="text-[11px] text-[#2E6B3E] bg-[#EAF3DE] rounded-lg px-3 py-2 mb-3">{success}</p>}
 
-              <button onClick={handleEmail} disabled={loading || !email || !password}
-                className={`w-full py-3 rounded-lg text-[12px] font-medium font-serif transition-all
-                  ${email && password && !loading ? 'bg-[#5C1A1A] text-white hover:bg-[#7A2424]' : 'bg-[#5C1A1A]/30 text-white/50 cursor-not-allowed'}`}>
-                {loading ? 'იტვირთება...' : tab==='login' ? 'შესვლა →' : 'რეგისტრაცია →'}
+              <button
+                onClick={stage==='login' ? handleLogin : handleRegister}
+                disabled={loading || !email || (stage==='login' ? !password : !pwOk)}
+                className={`w-full py-3 rounded-lg text-[12px] font-medium font-serif transition-all mt-1
+                  ${!loading && email && (stage==='login' ? password : pwOk)
+                    ? 'bg-[#5C1A1A] text-white hover:bg-[#7A2424]'
+                    : 'bg-[#5C1A1A]/30 text-white/50 cursor-not-allowed'}`}>
+                {loading ? 'იტვირთება...' : stage==='login' ? 'შესვლა →' : 'რეგისტრაცია →'}
               </button>
             </div>
           </>
         )}
+
         <p className="text-center text-[10px] text-[#8B6B6B] mt-3">შესვლით ეთანხმები Terms of Service-ს</p>
       </div>
     </div>
