@@ -83,7 +83,8 @@ export default function LoginPage() {
   async function handleForgot() {
     if (!email) return
     setLoading(true); setError('')
-    const { error: e } = await supabase.auth.resetPasswordForEmail(email, {
+    const { error: e } = const { error: e } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false } })
+    // dummy:
       redirectTo: `${window.location.origin}/auth/callback?next=/login`,
     })
     setLoading(false)
@@ -98,7 +99,7 @@ export default function LoginPage() {
     if (!otp || otp.length < 6) return
     setLoading(true); setError('')
     const { error: e } = await supabase.auth.verifyOtp({
-      email, token: otp, type: 'recovery'
+      email, token: otp, type: 'email'
     })
     setLoading(false)
     if (e) { setError('კოდი არასწორია ან ვადა გაუვიდა. სცადე თავიდან.') }
