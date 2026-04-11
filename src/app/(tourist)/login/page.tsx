@@ -19,6 +19,16 @@ function PwHint({ p }: { p: string }) {
   )
 }
 
+const PassInput = ({val, set, show, toggle, mb='mb-2'}: {val:string, set:(v:string)=>void, show:boolean, toggle:()=>void, mb?:string}) => (
+  <div className={`relative ${mb}`}>
+    <input type={show?"text":"password"} value={val} onChange={e=>set(e.target.value)} placeholder="••••••••"
+      className="w-full border border-[#DDD0B3] rounded-lg px-3 py-2.5 text-[12px] pr-9 outline-none focus:border-[#5C1A1A]" />
+    <button type="button" onClick={toggle} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8B6B6B] hover:text-[#5C1A1A]">
+      {show ? <EyeShut /> : <EyeOpen />}
+    </button>
+  </div>
+)
+
 export default function LoginPage() {
   const router = useRouter()
   const [stage, setStage] = useState<Stage>('login')
@@ -94,15 +104,7 @@ export default function LoginPage() {
     else { setSuccess('✅ პაროლი განახლდა!'); setTimeout(()=>{ setPass(''); setPass2(''); rst('login') },2000) }
   }
 
-  const PassInput = ({val,set,show,toggle,mb='mb-2'}:{val:string,set:(v:string)=>void,show:boolean,toggle:()=>void,mb?:string}) => (
-    <div className={`relative ${mb}`}>
-      <input type={show?"text":"password"} value={val} onChange={e=>set(e.target.value)} placeholder="••••••••"
-        className="w-full border border-[#DDD0B3] rounded-lg px-3 py-2.5 text-[12px] pr-9 outline-none focus:border-[#5C1A1A]" />
-      <button type="button" onClick={toggle} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8B6B6B] hover:text-[#5C1A1A]">
-        {show ? <EyeShut /> : <EyeOpen />}
-      </button>
-    </div>
-  )
+
 
   return (
     <div className="min-h-screen bg-[#FAF6EE] flex items-center justify-center px-4">
