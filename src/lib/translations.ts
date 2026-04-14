@@ -239,7 +239,7 @@ const t = {
     },
     home: {
       hero: 'Votre Journée Vin Parfaite en Bordeaux',
-      heroSub: 'Réservez n'importe quel château en 3 minutes. Transport inclus. L'IA recommande le parcours idéal.',
+      heroSub: 'Réservez n’importe quel château en 3 minutes. Transport inclus. L’IA recommande le parcours idéal.',
       cta: 'Créer Ma Journée Vin →',
       browse: 'Explorer les Châteaux',
       popularTitle: 'Châteaux populaires',
