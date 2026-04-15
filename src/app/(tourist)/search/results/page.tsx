@@ -1,10 +1,12 @@
 'use client'
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { useLanguage } from '@/context/LanguageContext'
 import { ResultsList } from '@/components/search/ResultsList'
 import type { Chateau } from '@/types/database'
 
-const STYLES = ['წითელი', 'თეთრი', 'ტკბილი', 'ყველა']
+const STYLES_EN = ['Red', 'White', 'Sweet', 'All']
+const STYLES_FR = ['Rouge', 'Blanc', 'Doux', 'Tous']
 const VISIT_TYPES = ['Tasting', 'Private', 'Cellar Visit', 'Harvest']
 const LANGS = ['EN', 'FR', 'DE', 'ES', 'ZH', 'JA']
 const RATINGS = ['★4.0+', '★4.5+', '★4.8+']
@@ -12,11 +14,13 @@ const RATINGS = ['★4.0+', '★4.5+', '★4.8+']
 function SearchResultsInner() {
   const params  = useSearchParams()
   const q       = params.get('q') ?? ''
+  const { lang } = useLanguage()
+  const STYLES = lang === 'fr' ? STYLES_FR : STYLES_EN
 
   const [chateaux, setChateaux]     = useState<Chateau[]>([])
   const [loading, setLoading]       = useState(true)
   const [maxPrice, setMaxPrice]     = useState(250)
-  const [selStyles, setSelStyles]   = useState<string[]>(['წითელი'])
+  const [selStyles, setSelStyles]   = useState<string[]>([])
   const [selLangs, setSelLangs]     = useState<string[]>(['EN'])
   const [selRating, setSelRating]   = useState('★4.5+')
   const [freeCancel, setFreeCancel] = useState(false)
@@ -73,13 +77,13 @@ function SearchResultsInner() {
       <div className="bg-[#5C1A1A] px-4 py-2.5 flex items-center justify-between">
         <div>
           <p className="text-[11px] text-white font-medium">"{q}"</p>
-          <p className="text-[9px] text-[#EDE4CF]">{loading ? '...' : `${chateaux.length} შედეგი`}</p>
+          <p className="text-[9px] text-[#EDE4CF]">{loading ? '...' : lang === 'fr' ? `${chateaux.length} résultats` : `${chateaux.length} results`}</p>
         </div>
         <button
           onClick={() => setShowFilters(!showFilters)}
           className="text-[9px] text-[#C4963A] border border-[#C4963A]/40 rounded px-2.5 py-1"
         >
-          ფ-ბი ▾ {activeFilters.length > 0 ? `(${activeFilters.length})` : ''}
+          {activeFilters.length > 0 ? `(${activeFilters.length})` : ''}
         </button>
       </div>
 
@@ -156,7 +160,7 @@ function SearchResultsInner() {
           count={chateaux.length}
           headerLabel={q}
           activeFilters={activeFilters}
-          emptyAction={{ label: '→ AI Builder სცადე', href: '/build' }}
+          emptyAction={{ label: lang === 'fr' ? '→ Essayer AI Builder' : '→ Try AI Builder', href: '/build' }}
         />
       )}
     </div>
