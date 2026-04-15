@@ -8,7 +8,7 @@ const AMOUNTS = [
   { v:80,  label:'Classic',   inc:'+ Lunch included', popular:true },
   { v:150, label:'Premium',   inc:'Full Premium Day' },
 ]
-const OCCASIONS = ['Birthday','Anniversary','March 8','Wedding','Father's Day','Other']
+const OCCASIONS = ['Birthday','Anniversary','March 8','Wedding','Father’s Day','Other']
 const TAGLINES: Record<number,string> = { 50:'Tasting + Transport', 80:'Tasting + Transport + Lunch', 150:'Full Premium Wine Day' }
 
 export default function GiftPage() {
