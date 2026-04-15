@@ -22,9 +22,9 @@ export default function GiftPersonalizePage() {
     deliveryLabel:  lang === 'fr' ? 'Mode de livraison' : 'Delivery method',
     nextBtn:        lang === 'fr' ? `Continuer → €${amount}` : `Continue → €${amount}`,
     delivery: {
-      email:     { name: lang === 'fr' ? 'Immédiat' : 'Instant',   sub: 'Email now' },
-      scheduled: { name: lang === 'fr' ? 'Planifier' : 'Schedule', sub: 'Choose date' },
-      pdf:       { name: 'PDF ↓',                                   sub: 'Print yourself' },
+      email:     { name: lang === 'fr' ? 'Immédiat' : 'Instant',   sub: lang === 'fr' ? 'Email immédiat' : 'Email now' },
+      scheduled: { name: lang === 'fr' ? 'Planifier' : 'Schedule', sub: lang === 'fr' ? 'Choisir date' : 'Choose date' },
+      pdf:       { name: 'PDF ↓',                                   sub: lang === 'fr' ? 'Imprimer' : 'Print yourself' },
     }
   }
 
