@@ -27,10 +27,10 @@ function SearchResultsInner() {
   useEffect(() => {
     setLoading(true)
     setTimeout(() => {
-      setChateaux([
-        { id:'1', slug:'chateau-bernateau', name:'Château Bernateau', avg_rating:4.8, review_count:737, color_hex:'7A2424', free_cancellation:true, is_sustainable:true, languages:['en','fr','de'], description_en:'Family estate in the heart of Saint-Émilion. Since 1897.', distance_km:45 } as any,
-        { id:'2', slug:'chateau-mauvinon',  name:'Château Mauvinon',  avg_rating:4.6, review_count:289, color_hex:'5C1A1A', free_cancellation:true, is_sustainable:true, languages:['en','fr'],      description_en:'Biodynamic estate, 2024 Best Sustainable Practices winner.', distance_km:45 } as any,
-        { id:'3', slug:'chateau-la-garde',  name:'Château La Garde',  avg_rating:4.7, review_count:512, color_hex:'2E6B3E', free_cancellation:true, is_sustainable:false, languages:['en','fr','de','es'], description_en:'Just 15km from Bordeaux. 2025 Best of Bordeaux Wine Tourism.', distance_km:15 } as any,
+      const allChateaux = [
+        { id:'1', slug:'chateau-bernateau', price_min:65, name:'Château Bernateau', avg_rating:4.8, review_count:737, color_hex:'7A2424', free_cancellation:true, is_sustainable:true, languages:['en','fr','de'], description_en:'Family estate in the heart of Saint-Émilion. Since 1897.', distance_km:45 } as any,
+        { id:'2', slug:'chateau-mauvinon', price_min:65,  name:'Château Mauvinon',  avg_rating:4.6, review_count:289, color_hex:'5C1A1A', free_cancellation:true, is_sustainable:true, languages:['en','fr'],      description_en:'Biodynamic estate, 2024 Best Sustainable Practices winner.', distance_km:45 } as any,
+        { id:'3', slug:'chateau-la-garde', price_min:40,  name:'Château La Garde',  avg_rating:4.7, review_count:512, color_hex:'2E6B3E', free_cancellation:true, is_sustainable:false, languages:['en','fr','de','es'], description_en:'Just 15km from Bordeaux. 2025 Best of Bordeaux Wine Tourism.', distance_km:15 } as any,
       ])
       setLoading(false)
     }, 600)
