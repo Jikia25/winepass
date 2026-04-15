@@ -22,7 +22,6 @@ export default function LandingPage() {
         <p className="text-sm text-[#EDE4CF] mb-6 leading-relaxed">{h.heroSub}</p>
         <div className="flex gap-3 justify-center flex-wrap">
           <Link href="/build" className="bg-[#C4963A] text-[#3D0F0F] font-semibold font-serif px-6 py-3 rounded-lg text-sm hover:bg-[#D4A840] transition">{h.cta}</Link>
-          <Link href="/search" className="border border-white/40 text-white px-5 py-3 rounded-lg text-sm hover:bg-white/10 transition">{h.browse}</Link>
         </div>
       </section>
 
@@ -36,7 +35,7 @@ export default function LandingPage() {
       </div>
 
       <div className="bg-[#FAF6EE] flex border-b border-[#EDE4CF]">
-        {[{b:'No booking fee',s:'Always on-site price'},{b:'Free cancellation',s:'Up to 48h before'},{b:'Transport included',s:'In every Bundle Pass'},{b:'7 languages',s:'EN FR DE ES IT ZH JA'}].map(t => (
+        {[{b:'No booking fee',s:'Always on-site price'},{b:'Free cancellation',s:'Up to 48h before'},{b:'Transport included',s:'In every Bundle Pass'},{b:lang==='fr'?'Sans frais':'No booking fee',s:lang==='fr'?'Prix direct château':'Always on-site price'}].map(t => (
           <div key={t.b} className="flex-1 text-center py-2 px-1 border-r border-[#EDE4CF] last:border-r-0">
             <p className="font-semibold text-[9px] text-[#5C1A1A]">{t.b}</p>
             <p className="text-[8px] text-[#8B6B6B] mt-0.5">{t.s}</p>
