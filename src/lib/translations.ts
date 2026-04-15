@@ -4,6 +4,8 @@ const t = {
   en: {
     nav: {
       giftCard: 'Gift Card',
+      regions: 'Regions',
+      search: 'Search',
       login: 'Login',
       profile: 'Profile',
       signOut: 'Sign out',
@@ -233,6 +235,8 @@ const t = {
   fr: {
     nav: {
       giftCard: 'Carte Cadeau',
+      regions: 'Régions',
+      search: 'Rechercher',
       login: 'Connexion',
       profile: 'Profil',
       signOut: 'Déconnexion',
