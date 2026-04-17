@@ -37,6 +37,7 @@ export default function TouristLayout({ children }: { children: React.ReactNode 
     if (searchQ.trim()) {
       router.push(`/search/results?q=${encodeURIComponent(searchQ.trim())}`)
       setSearchOpen(false)
+      setBurgerOpen(false)
       setSearchQ('')
     }
   }
@@ -49,79 +50,62 @@ export default function TouristLayout({ children }: { children: React.ReactNode 
         {/* Logo */}
         <Link href="/" className="flex items-center gap-1.5 flex-shrink-0">
           <div className="w-7 h-7 bg-[#C4963A] flex items-center justify-center font-serif font-bold text-[#5C1A1A] text-[13px] rounded-sm">W</div>
-          <span className="font-serif text-[13px] text-white font-medium hidden sm:block">WinePass</span>
+          <span className="font-serif text-[13px] text-white font-medium">WinePass</span>
         </Link>
 
-        <div className="flex items-center gap-2">
-          {/* Animated search */}
+        {/* Desktop nav */}
+        <div className="hidden md:flex items-center gap-2">
           <form onSubmit={handleSearch} className="flex items-center">
-            <div className={`flex items-center overflow-hidden transition-all duration-300 ease-in-out ${searchOpen ? 'w-44 bg-white/10 border border-white/30 rounded-lg px-2' : 'w-8'}`}>
-              <button type="button" onClick={() => setSearchOpen(true)} className="text-white/70 hover:text-white transition flex-shrink-0 p-1">
-                🔍
-              </button>
+            <div className={`flex items-center overflow-hidden transition-all duration-300 ${searchOpen ? 'w-44 bg-white/10 border border-white/30 rounded-lg px-2' : 'w-8'}`}>
+              <button type="button" onClick={() => setSearchOpen(true)} className="text-white/70 hover:text-white p-1">🔍</button>
               {searchOpen && (
-                <input
-                  autoFocus
-                  value={searchQ}
-                  onChange={e => setSearchQ(e.target.value)}
+                <input autoFocus value={searchQ} onChange={e => setSearchQ(e.target.value)}
                   onBlur={() => { if (!searchQ) setSearchOpen(false) }}
                   placeholder={lang === 'fr' ? 'Château...' : 'Search...'}
-                  className="bg-transparent text-[11px] text-white placeholder-white/40 outline-none flex-1 py-1.5"
-                />
+                  className="bg-transparent text-[11px] text-white placeholder-white/40 outline-none flex-1 py-1.5" />
               )}
             </div>
           </form>
-
-          {/* Gift icon */}
-          <Link href="/gift" className="text-[#C4963A] hover:scale-110 transition-transform p-1">
-            🎁
-          </Link>
-
-          {/* Language dropdown */}
+          <Link href="/gift" className="text-[#C4963A] hover:scale-110 transition-transform p-1">🎁</Link>
           <div className="relative">
-            <button
-              onClick={() => { setLangOpen(!langOpen); setBurgerOpen(false) }}
-              className="flex items-center gap-0.5 border border-white/20 rounded px-1.5 py-1 hover:border-white/40 transition"
-            >
+            <button onClick={() => setLangOpen(!langOpen)}
+              className="flex items-center gap-0.5 border border-white/20 rounded px-1.5 py-1 hover:border-white/40 transition">
               <span className="text-[15px]">{FLAGS[lang]}</span>
               <span className="text-white/40 text-[8px] ml-0.5">▾</span>
             </button>
             {langOpen && <div className="fixed inset-0 z-40" onClick={() => setLangOpen(false)} />}
             <div className={`absolute right-0 top-9 z-50 bg-white rounded-lg shadow-xl border border-[#DDD0B3] overflow-hidden min-w-[60px] transition-all duration-200 origin-top ${langOpen ? 'opacity-100 scale-y-100' : 'opacity-0 scale-y-0 pointer-events-none'}`}>
-              <button onClick={() => { setLang('en'); setLangOpen(false) }}
-                className={`w-full flex items-center justify-center py-2.5 text-[18px] hover:bg-[#FAF6EE] transition ${lang==='en'?'bg-[#FAF0F0]':''}`}>
-                🇬🇧
-              </button>
+              <button onClick={() => { setLang('en'); setLangOpen(false) }} className={`w-full flex items-center justify-center py-2.5 text-[18px] hover:bg-[#FAF6EE] ${lang==='en'?'bg-[#FAF0F0]':''}`}>🇬🇧</button>
               <div className="h-px bg-[#EDE4CF]" />
-              <button onClick={() => { setLang('fr'); setLangOpen(false) }}
-                className={`w-full flex items-center justify-center py-2.5 text-[18px] hover:bg-[#FAF6EE] transition ${lang==='fr'?'bg-[#FAF0F0]':''}`}>
-                🇫🇷
-              </button>
+              <button onClick={() => { setLang('fr'); setLangOpen(false) }} className={`w-full flex items-center justify-center py-2.5 text-[18px] hover:bg-[#FAF6EE] ${lang==='fr'?'bg-[#FAF0F0]':''}`}>🇫🇷</button>
             </div>
           </div>
-
-          {/* Desktop: user avatar */}
-          {user && (
-            <Link href="/profile" className="hidden md:block">
-              {avatar
-                ? <img src={avatar} className="w-7 h-7 rounded-full border border-[#C4963A]/50" />
-                : <div className="w-7 h-7 rounded-full bg-[#C4963A] flex items-center justify-center text-[#3D0F0F] text-[10px] font-bold">{initials}</div>
-              }
+          {user ? (
+            <Link href="/profile">
+              {avatar ? <img src={avatar} className="w-7 h-7 rounded-full border border-[#C4963A]/50" />
+                : <div className="w-7 h-7 rounded-full bg-[#C4963A] flex items-center justify-center text-[#3D0F0F] text-[10px] font-bold">{initials}</div>}
             </Link>
+          ) : (
+            <Link href="/login" className="text-[9px] text-white/70 border border-white/20 rounded px-2 py-1 hover:text-white transition">{tr.nav.login}</Link>
           )}
+        </div>
 
-          {/* Desktop: login */}
-          {!user && (
-            <Link href="/login" className="hidden md:block text-[9px] text-white/70 border border-white/20 rounded px-2 py-1 hover:text-white transition">
-              {tr.nav.login}
-            </Link>
-          )}
-
-          {/* Mobile burger */}
-          <button
-            onClick={() => { setBurgerOpen(!burgerOpen); setLangOpen(false) }}
-            className="md:hidden flex flex-col gap-[4px] p-1.5 ml-1"
-          >
+        {/* Mobile: lang + burger only */}
+        <div className="flex md:hidden items-center gap-2">
+          <div className="relative">
+            <button onClick={() => { setLangOpen(!langOpen); setBurgerOpen(false) }}
+              className="flex items-center gap-0.5 border border-white/20 rounded px-1.5 py-1">
+              <span className="text-[15px]">{FLAGS[lang]}</span>
+              <span className="text-white/40 text-[8px] ml-0.5">▾</span>
+            </button>
+            {langOpen && <div className="fixed inset-0 z-40" onClick={() => setLangOpen(false)} />}
+            <div className={`absolute right-0 top-9 z-50 bg-white rounded-lg shadow-xl border border-[#DDD0B3] overflow-hidden min-w-[60px] transition-all duration-200 origin-top ${langOpen ? 'opacity-100 scale-y-100' : 'opacity-0 scale-y-0 pointer-events-none'}`}>
+              <button onClick={() => { setLang('en'); setLangOpen(false) }} className={`w-full flex items-center justify-center py-2.5 text-[18px] hover:bg-[#FAF6EE] ${lang==='en'?'bg-[#FAF0F0]':''}`}>🇬🇧</button>
+              <div className="h-px bg-[#EDE4CF]" />
+              <button onClick={() => { setLang('fr'); setLangOpen(false) }} className={`w-full flex items-center justify-center py-2.5 text-[18px] hover:bg-[#FAF6EE] ${lang==='fr'?'bg-[#FAF0F0]':''}`}>🇫🇷</button>
+            </div>
+          </div>
+          <button onClick={() => { setBurgerOpen(!burgerOpen); setLangOpen(false) }} className="flex flex-col gap-[4px] p-1.5">
             <span className={`block w-5 h-[2px] bg-white transition-all duration-200 ${burgerOpen?'rotate-45 translate-y-[6px]':''}`} />
             <span className={`block w-5 h-[2px] bg-white transition-all duration-200 ${burgerOpen?'opacity-0':''}`} />
             <span className={`block w-5 h-[2px] bg-white transition-all duration-200 ${burgerOpen?'-rotate-45 -translate-y-[6px]':''}`} />
@@ -132,30 +116,41 @@ export default function TouristLayout({ children }: { children: React.ReactNode 
       {/* Mobile burger menu */}
       {burgerOpen && (
         <>
-          <div className="fixed inset-0 z-40 bg-black/40 md:hidden" onClick={() => setBurgerOpen(false)} />
-          <div className="fixed top-12 left-0 right-0 z-50 bg-[#3D0F0F] border-b border-[#C4963A]/20 md:hidden">
-            {/* Profile at top center */}
-            {user && (
-              <Link href="/profile" onClick={() => setBurgerOpen(false)}
-                className="flex flex-col items-center py-4 border-b border-white/10">
-                {avatar
-                  ? <img src={avatar} className="w-12 h-12 rounded-full border-2 border-[#C4963A]" />
-                  : <div className="w-12 h-12 rounded-full bg-[#C4963A] flex items-center justify-center text-[#3D0F0F] text-[16px] font-bold">{initials}</div>
-                }
-                <p className="text-[11px] text-white mt-2 font-medium">{name}</p>
+          <div className="fixed inset-0 z-40 bg-black/40" onClick={() => setBurgerOpen(false)} />
+          <div className="fixed top-12 left-0 right-0 z-50 bg-[#3D0F0F] border-b border-[#C4963A]/20">
+            {/* Profile */}
+            {user ? (
+              <Link href="/profile" onClick={() => setBurgerOpen(false)} className="flex flex-col items-center py-5 border-b border-white/10">
+                {avatar ? <img src={avatar} className="w-14 h-14 rounded-full border-2 border-[#C4963A]" />
+                  : <div className="w-14 h-14 rounded-full bg-[#C4963A] flex items-center justify-center text-[#3D0F0F] text-[18px] font-bold">{initials}</div>}
+                <p className="text-[12px] text-white mt-2 font-medium">{name}</p>
                 <p className="text-[9px] text-[#EDE4CF]">{user.email}</p>
               </Link>
+            ) : (
+              <Link href="/login" onClick={() => setBurgerOpen(false)} className="flex items-center justify-center py-4 border-b border-white/10 text-[13px] text-white gap-2">
+                🔑 {tr.nav.login}
+              </Link>
             )}
-            <div className="flex flex-col py-2">
-              <Link href="/"        onClick={() => setBurgerOpen(false)} className="px-5 py-3 text-[13px] text-white border-b border-white/5">🏠 Home</Link>
-              <Link href="/build"   onClick={() => setBurgerOpen(false)} className="px-5 py-3 text-[13px] text-white border-b border-white/5">🍷 {lang==='fr'?'Créer ma journée':'Build My Day'}</Link>
-              <Link href="/regions" onClick={() => setBurgerOpen(false)} className="px-5 py-3 text-[13px] text-white border-b border-white/5">🗺 {lang==='fr'?'Appellations':'Regions'}</Link>
-              <Link href="/gift"    onClick={() => setBurgerOpen(false)} className="px-5 py-3 text-[13px] text-[#C4963A] border-b border-white/5">🎁 {tr.nav.giftCard}</Link>
-              {!user && (
-                <Link href="/login" onClick={() => setBurgerOpen(false)} className="px-5 py-3 text-[13px] text-white border-b border-white/5">🔑 {tr.nav.login}</Link>
-              )}
+
+            {/* Search */}
+            <form onSubmit={handleSearch} className="px-4 py-3 border-b border-white/5">
+              <div className="flex items-center gap-2 bg-white/10 border border-white/20 rounded-lg px-3 py-2">
+                <span className="text-white/50">🔍</span>
+                <input value={searchQ} onChange={e => setSearchQ(e.target.value)}
+                  placeholder={lang === 'fr' ? 'Rechercher un château...' : 'Search châteaux...'}
+                  className="bg-transparent text-[12px] text-white placeholder-white/40 outline-none flex-1" />
+              </div>
+            </form>
+
+            {/* Nav links */}
+            <div className="flex flex-col py-1">
+              <Link href="/"        onClick={() => setBurgerOpen(false)} className="px-5 py-3 text-[13px] text-white border-b border-white/5 flex items-center gap-3">🏠 Home</Link>
+              <Link href="/build"   onClick={() => setBurgerOpen(false)} className="px-5 py-3 text-[13px] text-white border-b border-white/5 flex items-center gap-3">🍷 {lang==='fr'?'Créer ma journée':'Build My Day'}</Link>
+              <Link href="/regions" onClick={() => setBurgerOpen(false)} className="px-5 py-3 text-[13px] text-white border-b border-white/5 flex items-center gap-3">🗺 {lang==='fr'?'Appellations':'Regions'}</Link>
+              <Link href="/gift"    onClick={() => setBurgerOpen(false)} className="px-5 py-3 text-[13px] text-[#C4963A] border-b border-white/5 flex items-center gap-3">🎁 {tr.nav.giftCard}</Link>
+              <Link href="/corporate" onClick={() => setBurgerOpen(false)} className="px-5 py-3 text-[13px] text-white border-b border-white/5 flex items-center gap-3">🏢 {lang==='fr'?'Entreprises':'Corporate'}</Link>
               {user && (
-                <button onClick={handleSignOut} className="px-5 py-3 text-[13px] text-[#F87171] text-left">🚪 {tr.nav.signOut}</button>
+                <button onClick={handleSignOut} className="px-5 py-3 text-[13px] text-[#F87171] text-left flex items-center gap-3">🚪 {tr.nav.signOut}</button>
               )}
             </div>
           </div>
