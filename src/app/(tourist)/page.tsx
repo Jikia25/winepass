@@ -5,7 +5,7 @@ import { useLanguage } from '@/context/LanguageContext'
 import type { Chateau, Appellation } from '@/types/database'
 
 export default function LandingPage() {
-  const { tr } = useLanguage()
+  const { tr, lang } = useLanguage()
   const h = tr.home
   const [popular, setPopular]           = useState<Chateau[]>([])
   const [appellations, setAppellations] = useState<Appellation[]>([])
