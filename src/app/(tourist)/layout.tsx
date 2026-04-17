@@ -41,7 +41,6 @@ export default function TouristLayout({ children }: { children: React.ReactNode 
     }
   }
 
-  const OTHER_LANG = lang === 'en' ? 'fr' : 'en'
   const FLAGS: Record<string, string> = { en: '🇬🇧', fr: '🇫🇷' }
 
   return (
@@ -56,12 +55,8 @@ export default function TouristLayout({ children }: { children: React.ReactNode 
         <div className="flex items-center gap-2">
           {/* Animated search */}
           <form onSubmit={handleSearch} className="flex items-center">
-            <div className={`flex items-center overflow-hidden transition-all duration-300 ease-in-out ${searchOpen ? 'w-48 bg-white/10 border border-white/30 rounded-lg px-2' : 'w-8'}`}>
-              <button
-                type="button"
-                onClick={() => setSearchOpen(true)}
-                className="text-white/70 hover:text-white transition flex-shrink-0 p-1"
-              >
+            <div className={`flex items-center overflow-hidden transition-all duration-300 ease-in-out ${searchOpen ? 'w-44 bg-white/10 border border-white/30 rounded-lg px-2' : 'w-8'}`}>
+              <button type="button" onClick={() => setSearchOpen(true)} className="text-white/70 hover:text-white transition flex-shrink-0 p-1">
                 🔍
               </button>
               {searchOpen && (
@@ -78,70 +73,55 @@ export default function TouristLayout({ children }: { children: React.ReactNode 
           </form>
 
           {/* Gift icon */}
-          <Link href="/gift" className="text-[#C4963A] hover:scale-110 transition-transform p-1" title={tr.nav.giftCard}>
+          <Link href="/gift" className="text-[#C4963A] hover:scale-110 transition-transform p-1">
             🎁
           </Link>
 
-          {/* Language dropdown — flags only */}
+          {/* Language dropdown */}
           <div className="relative">
             <button
-              onClick={() => setLangOpen(!langOpen)}
+              onClick={() => { setLangOpen(!langOpen); setBurgerOpen(false) }}
               className="flex items-center gap-0.5 border border-white/20 rounded px-1.5 py-1 hover:border-white/40 transition"
             >
               <span className="text-[15px]">{FLAGS[lang]}</span>
               <span className="text-white/40 text-[8px] ml-0.5">▾</span>
             </button>
-            <div className={`absolute right-0 top-9 z-50 bg-white rounded-lg shadow-xl border border-[#DDD0B3] overflow-hidden min-w-[70px] transition-all duration-200 origin-top ${langOpen ? 'opacity-100 scale-y-100' : 'opacity-0 scale-y-0 pointer-events-none'}`}>
-              <button
-                onClick={() => { setLang('en'); setLangOpen(false) }}
+            {langOpen && <div className="fixed inset-0 z-40" onClick={() => setLangOpen(false)} />}
+            <div className={`absolute right-0 top-9 z-50 bg-white rounded-lg shadow-xl border border-[#DDD0B3] overflow-hidden min-w-[60px] transition-all duration-200 origin-top ${langOpen ? 'opacity-100 scale-y-100' : 'opacity-0 scale-y-0 pointer-events-none'}`}>
+              <button onClick={() => { setLang('en'); setLangOpen(false) }}
                 className={`w-full flex items-center justify-center py-2.5 text-[18px] hover:bg-[#FAF6EE] transition ${lang==='en'?'bg-[#FAF0F0]':''}`}>
                 🇬🇧
               </button>
               <div className="h-px bg-[#EDE4CF]" />
-              <button
-                onClick={() => { setLang('fr'); setLangOpen(false) }}
+              <button onClick={() => { setLang('fr'); setLangOpen(false) }}
                 className={`w-full flex items-center justify-center py-2.5 text-[18px] hover:bg-[#FAF6EE] transition ${lang==='fr'?'bg-[#FAF0F0]':''}`}>
                 🇫🇷
               </button>
             </div>
-            {langOpen && <div className="fixed inset-0 z-40" onClick={() => setLangOpen(false)} />}
           </div>
 
-          {/* User / Login */}
-          {user ? (
-            <div className="relative">
-              <button onClick={() => setBurgerOpen(!burgerOpen)}>
-                {avatar
-                  ? <img src={avatar} className="w-7 h-7 rounded-full border border-[#C4963A]/50" />
-                  : <div className="w-7 h-7 rounded-full bg-[#C4963A] flex items-center justify-center text-[#3D0F0F] text-[10px] font-bold">{initials}</div>
-                }
-              </button>
-              {burgerOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setBurgerOpen(false)} />
-                  <div className="absolute right-0 top-9 z-50 bg-white rounded-xl shadow-xl border border-[#DDD0B3] w-48 overflow-hidden">
-                    <div className="px-4 py-3 border-b border-[#EDE4CF]">
-                      <p className="text-[11px] font-semibold truncate">{name}</p>
-                      <p className="text-[9px] text-[#8B6B6B] truncate">{user?.email}</p>
-                    </div>
-                    <Link href="/profile" onClick={() => setBurgerOpen(false)} className="flex items-center gap-2 px-4 py-2.5 text-[11px] hover:bg-[#FAF6EE] transition">
-                      👤 {tr.nav.profile}
-                    </Link>
-                    <button onClick={handleSignOut} className="w-full flex items-center gap-2 px-4 py-2.5 text-[11px] text-[#A32D2D] hover:bg-[#FCEBEB] transition">
-                      🚪 {tr.nav.signOut}
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          ) : (
-            <Link href="/login" className="text-[9px] text-white/70 border border-white/20 rounded px-2 py-1 hover:text-white transition">
+          {/* Desktop: user avatar */}
+          {user && (
+            <Link href="/profile" className="hidden md:block">
+              {avatar
+                ? <img src={avatar} className="w-7 h-7 rounded-full border border-[#C4963A]/50" />
+                : <div className="w-7 h-7 rounded-full bg-[#C4963A] flex items-center justify-center text-[#3D0F0F] text-[10px] font-bold">{initials}</div>
+              }
+            </Link>
+          )}
+
+          {/* Desktop: login */}
+          {!user && (
+            <Link href="/login" className="hidden md:block text-[9px] text-white/70 border border-white/20 rounded px-2 py-1 hover:text-white transition">
               {tr.nav.login}
             </Link>
           )}
 
           {/* Mobile burger */}
-          <button onClick={() => setBurgerOpen(!burgerOpen)} className="md:hidden flex flex-col gap-[4px] p-1.5 ml-1">
+          <button
+            onClick={() => { setBurgerOpen(!burgerOpen); setLangOpen(false) }}
+            className="md:hidden flex flex-col gap-[4px] p-1.5 ml-1"
+          >
             <span className={`block w-5 h-[2px] bg-white transition-all duration-200 ${burgerOpen?'rotate-45 translate-y-[6px]':''}`} />
             <span className={`block w-5 h-[2px] bg-white transition-all duration-200 ${burgerOpen?'opacity-0':''}`} />
             <span className={`block w-5 h-[2px] bg-white transition-all duration-200 ${burgerOpen?'-rotate-45 -translate-y-[6px]':''}`} />
@@ -154,18 +134,28 @@ export default function TouristLayout({ children }: { children: React.ReactNode 
         <>
           <div className="fixed inset-0 z-40 bg-black/40 md:hidden" onClick={() => setBurgerOpen(false)} />
           <div className="fixed top-12 left-0 right-0 z-50 bg-[#3D0F0F] border-b border-[#C4963A]/20 md:hidden">
+            {/* Profile at top center */}
+            {user && (
+              <Link href="/profile" onClick={() => setBurgerOpen(false)}
+                className="flex flex-col items-center py-4 border-b border-white/10">
+                {avatar
+                  ? <img src={avatar} className="w-12 h-12 rounded-full border-2 border-[#C4963A]" />
+                  : <div className="w-12 h-12 rounded-full bg-[#C4963A] flex items-center justify-center text-[#3D0F0F] text-[16px] font-bold">{initials}</div>
+                }
+                <p className="text-[11px] text-white mt-2 font-medium">{name}</p>
+                <p className="text-[9px] text-[#EDE4CF]">{user.email}</p>
+              </Link>
+            )}
             <div className="flex flex-col py-2">
               <Link href="/"        onClick={() => setBurgerOpen(false)} className="px-5 py-3 text-[13px] text-white border-b border-white/5">🏠 Home</Link>
               <Link href="/build"   onClick={() => setBurgerOpen(false)} className="px-5 py-3 text-[13px] text-white border-b border-white/5">🍷 {lang==='fr'?'Créer ma journée':'Build My Day'}</Link>
               <Link href="/regions" onClick={() => setBurgerOpen(false)} className="px-5 py-3 text-[13px] text-white border-b border-white/5">🗺 {lang==='fr'?'Appellations':'Regions'}</Link>
               <Link href="/gift"    onClick={() => setBurgerOpen(false)} className="px-5 py-3 text-[13px] text-[#C4963A] border-b border-white/5">🎁 {tr.nav.giftCard}</Link>
-              {user ? (
-                <>
-                  <Link href="/profile" onClick={() => setBurgerOpen(false)} className="px-5 py-3 text-[13px] text-white border-b border-white/5">👤 {tr.nav.profile}</Link>
-                  <button onClick={handleSignOut} className="px-5 py-3 text-[13px] text-[#F87171] text-left">🚪 {tr.nav.signOut}</button>
-                </>
-              ) : (
-                <Link href="/login" onClick={() => setBurgerOpen(false)} className="px-5 py-3 text-[13px] text-white">🔑 {tr.nav.login}</Link>
+              {!user && (
+                <Link href="/login" onClick={() => setBurgerOpen(false)} className="px-5 py-3 text-[13px] text-white border-b border-white/5">🔑 {tr.nav.login}</Link>
+              )}
+              {user && (
+                <button onClick={handleSignOut} className="px-5 py-3 text-[13px] text-[#F87171] text-left">🚪 {tr.nav.signOut}</button>
               )}
             </div>
           </div>
