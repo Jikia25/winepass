@@ -87,23 +87,6 @@ export default function DashboardHome() {
           ))}
         </div>
 
-        <div className="bg-white border border-[#DDD0B3] rounded-xl overflow-hidden mb-4">
-          <div className="flex justify-between items-center px-4 py-3 border-b border-[#EDE4CF]">
-            <p className="text-[12px] font-medium text-[#1C0A0A]">Recent Activity</p>
-            <Link href="/dashboard/notifications" className="text-[10px] text-[#5C1A1A]">See all →</Link>
-          </div>
-          {notifications.map((n,i) => (
-            <div key={n.id} className={`flex items-start gap-3 px-4 py-3 ${i<notifications.length-1?'border-b border-[#EDE4CF]':''} ${!n.read?'bg-[#FAF6EE]':''}`}>
-              <span className="text-[16px] mt-0.5">{n.type==='booking'?'📅':n.type==='review'?'⭐':'🎁'}</span>
-              <div className="flex-1">
-                <p className="text-[11px] text-[#1C0A0A]">{n.text}</p>
-                <p className="text-[9px] text-[#8B6B6B] mt-0.5">{n.time}</p>
-              </div>
-              {!n.read && <div className="w-2 h-2 rounded-full bg-[#A32D2D] mt-1 flex-shrink-0" />}
-            </div>
-          ))}
-        </div>
-
         <Link href="/" className="block w-full text-center border border-[#DDD0B3] rounded-xl py-3 text-[11px] text-[#5C1A1A] hover:bg-[#EDE4CF] transition">
           👁 View as Tourist
         </Link>
