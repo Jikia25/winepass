@@ -52,10 +52,6 @@ export default function DashboardHome() {
             <span className="text-[8px] bg-[#C4963A]/20 text-[#C4963A] border border-[#C4963A]/30 px-2 py-0.5 rounded-full ml-1">Owner</span>
           </div>
           <div className="flex items-center gap-2">
-            <Link href="/dashboard/notifications" className="relative">
-              <span className="text-white/70 text-[18px]">🔔</span>
-              {unread > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#A32D2D] rounded-full text-[8px] text-white flex items-center justify-center">{unread}</span>}
-            </Link>
             {avatar ? <img src={avatar} className="w-7 h-7 rounded-full border border-[#C4963A]/50" />
               : <div className="w-7 h-7 rounded-full bg-[#C4963A] flex items-center justify-center text-[#3D0F0F] text-[10px] font-bold">{initials}</div>}
           </div>
