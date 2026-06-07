@@ -1,5 +1,7 @@
 'use client'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
+const HeroScene = dynamic(() => import('@/components/hero/HeroScene').then(m => m.HeroScene), { ssr: false })
 import { useEffect, useState } from 'react'
 import { useLanguage } from '@/context/LanguageContext'
 import type { Chateau, Appellation } from '@/types/database'
@@ -16,14 +18,7 @@ export default function LandingPage() {
 
   return (
     <main>
-      <section className="bg-[#5C1A1A] px-5 py-10 text-center">
-        <p className="text-[10px] tracking-widest text-[#C4963A] uppercase mb-2">Bordeaux · 7,375 Châteaux</p>
-        <h1 className="font-serif text-3xl font-bold text-white leading-tight mb-2">{h.hero}</h1>
-        <p className="text-sm text-[#EDE4CF] mb-6 leading-relaxed">{h.heroSub}</p>
-        <div className="flex gap-3 justify-center flex-wrap">
-          <Link href="/build" className="bg-[#C4963A] text-[#3D0F0F] font-semibold font-serif px-6 py-3 rounded-lg text-sm hover:bg-[#D4A840] transition">{h.cta}</Link>
-        </div>
-      </section>
+      <HeroScene />
 
       <div className="bg-[#3D0F0F] flex">
         {[{v:'4.3M',l:'visitors/year'},{v:'€214',l:'avg. spend'},{v:'7,375',l:'châteaux'},{v:'★4.8',l:'avg. rating'}].map(s => (
