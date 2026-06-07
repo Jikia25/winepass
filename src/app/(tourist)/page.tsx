@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-const HeroScene = dynamic(() => import('@/components/hero/HeroScene').then(m => m.HeroScene), { ssr: false })
+const HeroScene = dynamic(() => import('@/components/hero/HeroScene'), { ssr: false })
 import { useEffect, useState } from 'react'
 import { useLanguage } from '@/context/LanguageContext'
 import type { Chateau, Appellation } from '@/types/database'
