@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import type { Chateau, ChateauFull, Appellation, Bundle, Booking, AIBuilderState } from '@/types/database'
+import type { ChateauWithAppellation, ChateauFull, Appellation, Bundle, Booking, AIBuilderState } from '@/types/database'
 
 // ══════════════════════════════════════════════════════════════
 // APPELLATIONS
@@ -36,10 +36,10 @@ export async function getChateaux(params?: {
   freeCancel?: boolean
   limit?: number
   offset?: number
-}): Promise<Chateau[]> {
+}): Promise<ChateauWithAppellation[]> {
   let query = supabase
     .from('chateaux')
-    .select('*, appellation:appellations(*)')
+    .select('*, appellation:appellations(*), bundles(price)')
     .eq('is_active', true)
 
   if (params?.appellation) {
@@ -68,7 +68,7 @@ export async function getChateaux(params?: {
 
   const { data, error } = await query
   if (error) throw error
-  return (data as Chateau[]) ?? []
+  return (data as ChateauWithAppellation[]) ?? []
 }
 
 export async function getChateau(slug: string): Promise<ChateauFull | null> {
@@ -87,25 +87,25 @@ export async function getChateau(slug: string): Promise<ChateauFull | null> {
   return data as ChateauFull
 }
 
-export async function searchChateaux(query: string, limit = 10): Promise<Chateau[]> {
+export async function searchChateaux(query: string, limit = 10): Promise<ChateauWithAppellation[]> {
   const { data } = await supabase
     .from('chateaux')
-    .select('*, appellation:appellations(*)')
+    .select('*, appellation:appellations(*), bundles(price)')
     .ilike('name', `%${query}%`)
     .eq('is_active', true)
     .order('avg_rating', { ascending: false })
     .limit(limit)
-  return (data as Chateau[]) ?? []
+  return (data as ChateauWithAppellation[]) ?? []
 }
 
-export async function getChateauxByAppellation(appellationSlug: string): Promise<Chateau[]> {
+export async function getChateauxByAppellation(appellationSlug: string): Promise<ChateauWithAppellation[]> {
   const { data } = await supabase
     .from('chateaux')
-    .select('*, appellation:appellations!inner(*)')
+    .select('*, appellation:appellations!inner(*), bundles(price)')
     .eq('appellations.slug', appellationSlug)
     .eq('is_active', true)
     .order('avg_rating', { ascending: false })
-  return (data as Chateau[]) ?? []
+  return (data as ChateauWithAppellation[]) ?? []
 }
 
 export async function getChateauxNearby(
@@ -121,14 +121,14 @@ export async function getChateauxNearby(
   return data ?? []
 }
 
-export async function getPopularChateaux(limit = 3): Promise<Chateau[]> {
+export async function getPopularChateaux(limit = 3): Promise<ChateauWithAppellation[]> {
   const { data } = await supabase
     .from('chateaux')
-    .select('*, appellation:appellations(*), bundles(*)')
+    .select('*, appellation:appellations(*), bundles(price)')
     .eq('is_active', true)
     .order('review_count', { ascending: false })
     .limit(limit)
-  return (data as Chateau[]) ?? []
+  return (data as ChateauWithAppellation[]) ?? []
 }
 
 // ══════════════════════════════════════════════════════════════

@@ -1,10 +1,11 @@
 'use client'
 import Link from 'next/link'
-import type { Chateau } from '@/types/database'
+import type { ChateauWithAppellation } from '@/types/database'
 import { useLanguage } from '@/context/LanguageContext'
+import { priceFrom } from '@/lib/pricing'
 
 interface Props {
-  chateaux:     Chateau[]
+  chateaux:     ChateauWithAppellation[]
   count:        number
   headerLabel:  string
   activeFilters?: { label: string; onRemove: () => void }[]
@@ -71,7 +72,9 @@ export function ResultsList({
             )}
           </div>
         ) : (
-          chateaux.map(ch => (
+          chateaux.map(ch => {
+            const from = priceFrom(ch.bundles)
+            return (
             <Link key={ch.id} href={`/chateau/${ch.slug}`}>
               <div className="bg-white border border-[#DDD0B3] rounded-[10px] mb-2.5 overflow-hidden hover:border-[#5C1A1A] transition-all hover:-translate-y-0.5">
                 <div className="h-[3px]" style={{ background: `#${ch.color_hex}` }} />
@@ -95,7 +98,9 @@ export function ResultsList({
                     )}
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <p className="font-serif text-[15px] font-bold text-[#5C1A1A]">{t.from} €65</p>
+                    <p className="font-serif text-[15px] font-bold text-[#5C1A1A]">
+                      {from !== null ? `${t.from} €${from}` : '—'}
+                    </p>
                     <p className="text-[7px] text-[#8B6B6B]">{t.perPerson} · Bundle</p>
                     <button className="mt-2 bg-[#5C1A1A] text-white px-2.5 py-1 rounded text-[9px] font-serif">
                       {t.book}
@@ -104,7 +109,8 @@ export function ResultsList({
                 </div>
               </div>
             </Link>
-          ))
+            )
+          })
         )}
         {chateaux.length > 0 && (
           <button className="w-full bg-transparent border border-[#DDD0B3] rounded-lg py-2.5 text-[11px] text-[#5C1A1A] mt-1 hover:bg-[#EDE4CF] transition">

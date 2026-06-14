@@ -1,13 +1,16 @@
 import Link from 'next/link'
-import type { Chateau } from '@/types/database'
+import type { ChateauWithAppellation } from '@/types/database'
+import { priceFrom } from '@/lib/pricing'
 
 interface Props {
-  chateau:  Chateau
+  chateau:  ChateauWithAppellation
   compact?: boolean
   distance?: number
 }
 
 export function ChateauCard({ chateau, compact, distance }: Props) {
+  const from = priceFrom(chateau.bundles)
+
   if (compact) {
     return (
       <Link href={`/chateau/${chateau.slug}`}>
@@ -23,7 +26,7 @@ export function ChateauCard({ chateau, compact, distance }: Props) {
           </div>
           <div className="p-1.5">
             <p className="font-serif text-[13px] font-bold text-[#5C1A1A]">
-              from €65
+              {from !== null ? `from €${from}` : '—'}
             </p>
             <p className="text-[7px] text-[#8B6B6B]">
               ★{chateau.avg_rating} · {chateau.review_count} rev.
@@ -87,7 +90,9 @@ export function ChateauCard({ chateau, compact, distance }: Props) {
 
           {/* Right */}
           <div className="text-right flex-shrink-0">
-            <p className="font-serif text-[15px] font-bold text-[#5C1A1A]">from €65</p>
+            <p className="font-serif text-[15px] font-bold text-[#5C1A1A]">
+              {from !== null ? `from €${from}` : '—'}
+            </p>
             <p className="text-[7px] text-[#8B6B6B]">/კ. · Bundle</p>
             <button className="mt-1.5 bg-[#5C1A1A] text-white rounded px-2.5 py-1 text-[9px] font-serif">
               Book →

@@ -3,15 +3,17 @@ import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { ResultsList } from '@/components/search/ResultsList'
 import { useLanguage } from '@/context/LanguageContext'
-import type { Chateau } from '@/types/database'
+import type { ChateauWithAppellation } from '@/types/database'
+import { getChateaux, searchChateaux } from '@/lib/db'
+import { priceFrom } from '@/lib/pricing'
 
 const RATINGS = ['★4.0+', '★4.5+', '★4.8+']
 
-const MOCK: any[] = [
-  { id:'1', slug:'chateau-bernateau', name:'Château Bernateau', price_min:65, avg_rating:4.8, review_count:737, color_hex:'7A2424', free_cancellation:true, is_sustainable:true, languages:['en','fr','de'], description_en:'Family estate in the heart of Saint-Émilion. Since 1897.', distance_km:45 },
-  { id:'2', slug:'chateau-mauvinon',  name:'Château Mauvinon',  price_min:65, avg_rating:4.6, review_count:289, color_hex:'5C1A1A', free_cancellation:true, is_sustainable:true, languages:['en','fr'],      description_en:'Biodynamic estate, 2024 Best Sustainable Practices winner.', distance_km:45 },
-  { id:'3', slug:'chateau-la-garde',  name:'Château La Garde',  price_min:40, avg_rating:4.7, review_count:512, color_hex:'2E6B3E', free_cancellation:true, is_sustainable:false, languages:['en','fr','de','es'], description_en:'Just 15km from Bordeaux. 2025 Best of Bordeaux Wine Tourism.', distance_km:15 },
-]
+const STYLE_MAP: Record<string, string> = {
+  Red: 'red', Rouge: 'red',
+  White: 'white', Blanc: 'white',
+  Sweet: 'sweet', Doux: 'sweet',
+}
 
 function SearchResultsInner() {
   const params = useSearchParams()
@@ -20,7 +22,7 @@ function SearchResultsInner() {
 
   const STYLES = lang === 'fr' ? ['Rouge','Blanc','Doux','Tous'] : ['Red','White','Sweet','All']
 
-  const [chateaux, setChateaux] = useState<Chateau[]>([])
+  const [chateaux, setChateaux] = useState<ChateauWithAppellation[]>([])
   const [loading, setLoading] = useState(true)
   const [maxPrice, setMaxPrice] = useState(250)
   const [selStyles, setSelStyles] = useState<string[]>([])
@@ -30,10 +32,27 @@ function SearchResultsInner() {
 
   useEffect(() => {
     setLoading(true)
-    setTimeout(() => {
-      setChateaux(MOCK.filter(ch => ch.price_min <= maxPrice) as any)
-      setLoading(false)
-    }, 400)
+    const minRating = parseFloat(selRating.replace('★', '').replace('+', ''))
+    const styles = selStyles.map(s => STYLE_MAP[s]).filter((s): s is string => !!s)
+
+    const fetchPromise = q.trim()
+      ? searchChateaux(q.trim(), 50)
+      : getChateaux({
+          styles: styles.length ? styles : undefined,
+          minRating,
+          freeCancel: freeCancel || undefined,
+          limit: 50,
+        })
+
+    fetchPromise
+      .then(data => {
+        setChateaux(data.filter(ch => {
+          const price = priceFrom(ch.bundles)
+          return price === null || price <= maxPrice
+        }))
+      })
+      .catch(() => setChateaux([]))
+      .finally(() => setLoading(false))
   }, [q, maxPrice, selStyles, selRating, freeCancel])
 
   const t = {

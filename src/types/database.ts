@@ -236,6 +236,7 @@ export type Availability    = Database['public']['Tables']['chateau_availability
 // ── Enriched types (with relations) ──────────────────────────
 export type ChateauWithAppellation = Chateau & {
   appellation: Appellation | null
+  bundles?: Pick<Bundle, 'price'>[]
 }
 export type ChateauFull = Chateau & {
   appellation: Appellation | null
