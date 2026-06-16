@@ -89,7 +89,10 @@ export interface Database {
           id: string
           booking_ref: string
           user_id: string | null
+          guest_name: string | null
           guest_email: string | null
+          guest_phone: string | null
+          special_requests: string | null
           chateau_id: string
           bundle_id: string
           visit_date: string

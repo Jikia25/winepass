@@ -30,8 +30,8 @@ export default function LandingPage() {
       </div>
 
       <div className="bg-[#FAF6EE] flex border-b border-[#EDE4CF]">
-        {[{b:'No booking fee',s:'Always on-site price'},{b:'Free cancellation',s:'Up to 48h before'},{b:'Transport included',s:'In every Bundle Pass'},{b:lang==='fr'?'Sans frais':'No booking fee',s:lang==='fr'?'Prix direct château':'Always on-site price'}].map(t => (
-          <div key={t.b} className="flex-1 text-center py-2 px-1 border-r border-[#EDE4CF] last:border-r-0">
+        {[{b:'No booking fee',s:'Always on-site price'},{b:'Free cancellation',s:'Up to 48h before'},{b:'Transport included',s:'In every Bundle Pass'},{b:lang==='fr'?'Sans frais':'No booking fee',s:lang==='fr'?'Prix direct château':'Always on-site price'}].map((t, i) => (
+          <div key={i} className="flex-1 text-center py-2 px-1 border-r border-[#EDE4CF] last:border-r-0">
             <p className="font-semibold text-[9px] text-[#5C1A1A]">{t.b}</p>
             <p className="text-[8px] text-[#8B6B6B] mt-0.5">{t.s}</p>
           </div>
