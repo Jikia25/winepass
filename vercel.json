@@ -1,10 +1,4 @@
 {
-  "framework": "nextjs",
-  "crons": [
-    {
-      "path": "/api/cron/cleanup-holds",
-      "schedule": "*/5 * * * *"
-    }
-  ]
+  "framework": "nextjs"
 }
 
