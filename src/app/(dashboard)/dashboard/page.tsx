@@ -35,6 +35,8 @@ export default function DashboardHome() {
 
   const NAV = [
     { href:'/dashboard/chateau',       icon:'🏰', label:'My Château' },
+    { href:'/dashboard/experiences',   icon:'🍷', label:'Experiences' },
+    { href:'/dashboard/addons',        icon:'✨', label:'Add-ons' },
     { href:'/dashboard/bookings',      icon:'📅', label:'Bookings', badge:3 },
     { href:'/dashboard/availability',  icon:'🗓', label:'Availability' },
     { href:'/dashboard/discounts',     icon:'🏷', label:'Discounts' },
