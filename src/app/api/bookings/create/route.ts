@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { supabaseAdmin } from '@/lib/supabase'
+import { cleanupExpiredHolds } from '@/lib/cleanupHolds'
 
 interface AddonInput {
   id: string
@@ -8,6 +9,9 @@ interface AddonInput {
 
 export async function POST(req: NextRequest) {
   try {
+    // Free up any stale holds before checking capacity
+    await cleanupExpiredHolds()
+
     const {
       chateauSlug, experienceId, visitDate, visitTime, guestsCount, language,
       userId, guestName, guestEmail, guestPhone, specialRequests, selectedAddons,
