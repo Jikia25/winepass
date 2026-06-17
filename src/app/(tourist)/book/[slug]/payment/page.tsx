@@ -11,12 +11,6 @@ import { supabase } from '@/lib/supabase'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '')
 
-const BUNDLE_LABELS: Record<string, { en: string; fr: string }> = {
-  basic:   { en: 'Basic',   fr: 'Basique' },
-  classic: { en: 'Classic', fr: 'Classique' },
-  premium: { en: 'Premium', fr: 'Premium' },
-}
-
 const CARD_ELEMENT_STYLE = {
   base: {
     fontSize: '14px',
@@ -34,12 +28,12 @@ const fmt = (n: number) => {
 
 type FullDraft = BookingDraft & {
   visitDate: string; visitTime: string; persons: number
-  bundleId: string; bundleName: string; bundlePrice: number
+  experienceId: string; experienceName: string; experiencePrice: number
   guestName: string; guestEmail: string
 }
 
 interface BookingResult {
-  bookingRef: string
+  bookingRef:   string
   clientSecret: string
 }
 
@@ -51,13 +45,14 @@ export default function PaymentPage() {
 
   const draft = useMemo<FullDraft | null>(() => {
     const d = getBookingDraft(slug)
-    if (!d.visitDate || !d.visitTime || !d.persons || !d.bundleId || !d.bundleName || d.bundlePrice == null || !d.guestName || !d.guestEmail) {
+    if (!d.visitDate || !d.visitTime || !d.persons || !d.experienceId || !d.experienceName || d.experiencePrice == null || !d.guestName || !d.guestEmail) {
       return null
     }
     return d as FullDraft
   }, [slug])
-  const [booking, setBooking] = useState<BookingResult | null>(null)
-  const [error, setError] = useState('')
+
+  const [booking,  setBooking]  = useState<BookingResult | null>(null)
+  const [error,    setError]    = useState('')
   const creatingRef = useRef(false)
 
   useEffect(() => {
@@ -74,11 +69,18 @@ export default function PaymentPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            chateauSlug: slug, bundleId: draft.bundleId,
-            visitDate: draft.visitDate, visitTime: draft.visitTime, persons: draft.persons,
-            language: lang, userId: user?.id ?? null,
-            guestName: draft.guestName, guestEmail: draft.guestEmail,
-            guestPhone: draft.guestPhone ?? '', specialRequests: draft.specialRequests ?? '',
+            chateauSlug:     slug,
+            experienceId:    draft.experienceId,
+            visitDate:       draft.visitDate,
+            visitTime:       draft.visitTime,
+            guestsCount:     draft.persons,
+            language:        lang,
+            userId:          user?.id ?? null,
+            guestName:       draft.guestName,
+            guestEmail:      draft.guestEmail,
+            guestPhone:      draft.guestPhone ?? '',
+            specialRequests: draft.specialRequests ?? '',
+            selectedAddons:  draft.selectedAddons ?? [],
           }),
         })
         const data = await res.json()
@@ -93,11 +95,11 @@ export default function PaymentPage() {
 
   const t = {
     title:    lang === 'fr' ? 'Paiement' : 'Payment',
-    summary:  lang === 'fr' ? 'Résumé de la commande' : 'Order summary',
     date:     lang === 'fr' ? 'Date' : 'Date',
     time:     lang === 'fr' ? 'Heure' : 'Time',
     guests:   lang === 'fr' ? 'Voyageurs' : 'Guests',
     persons:  lang === 'fr' ? 'pers.' : 'guests',
+    extras:   lang === 'fr' ? 'Extras' : 'Extras',
     subtotal: lang === 'fr' ? 'Sous-total' : 'Subtotal',
     tax:      lang === 'fr' ? 'TVA (10%)' : 'Tax (10%)',
     total:    lang === 'fr' ? 'Total' : 'Total',
@@ -105,9 +107,9 @@ export default function PaymentPage() {
     cardDetails: lang === 'fr' ? 'Détails de la carte' : 'Card details',
     pay:      (n: number) => lang === 'fr' ? `Payer €${fmt(n)}` : `Pay €${fmt(n)}`,
     processing: lang === 'fr' ? 'Traitement…' : 'Processing…',
-    freeCancellation: lang === 'fr' ? 'Annulation gratuite jusqu’à 48h avant la visite' : 'Free cancellation up to 48h before your visit',
+    freeCancellation: lang === 'fr' ? `Annulation gratuite jusqu'à 48h avant la visite` : 'Free cancellation up to 48h before your visit',
     preparing: lang === 'fr' ? 'Préparation du paiement…' : 'Preparing your payment…',
-    months: lang === 'fr'
+    months:   lang === 'fr'
       ? ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.']
       : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
   }
@@ -121,10 +123,14 @@ export default function PaymentPage() {
   }
 
   const [y, m, dd] = draft.visitDate.split('-').map(Number)
-  const dateLabel = `${dd} ${t.months[m - 1]} ${y}`
-  const subtotal = draft.bundlePrice * draft.persons
-  const taxAmount = Math.round(subtotal * 0.10 * 100) / 100
-  const total = subtotal + taxAmount
+  const dateLabel   = `${dd} ${t.months[m - 1]} ${y}`
+  const expSubtotal = draft.experiencePrice * draft.persons
+  const addSub      = draft.addonsSubtotal ?? 0
+  const subtotal    = expSubtotal + addSub
+  const taxAmount   = Math.round(subtotal * 0.10 * 100) / 100
+  const total       = subtotal + taxAmount
+
+  const expName = lang === 'fr' ? (draft.experienceNameFr ?? draft.experienceName) : draft.experienceName
 
   return (
     <div className="px-4 py-4 lg:max-w-[920px] lg:mx-auto lg:flex lg:gap-6 lg:items-start">
@@ -132,7 +138,7 @@ export default function PaymentPage() {
         <div className="bg-white border border-[#DDD0B3] rounded-[10px] p-3.5 lg:sticky lg:top-20">
           <div className="h-[3px] rounded-full mb-3" style={{ background: `#${chateau.color_hex}` }} />
           <p className="font-serif text-[13px] font-medium text-[#1C0A0A] mb-1">{chateau.name}</p>
-          <p className="text-[10px] text-[#C4963A] mb-3">{BUNDLE_LABELS[draft.bundleName]?.[lang] ?? draft.bundleName} Bundle</p>
+          <p className="text-[10px] text-[#C4963A] mb-3">{expName}</p>
 
           <div className="flex flex-col gap-1.5 text-[10px] mb-3 pb-3 border-b border-[#EDE4CF]">
             <div className="flex justify-between"><span className="text-[#8B6B6B]">{t.date}</span><span className="text-[#1C0A0A]">{dateLabel}</span></div>
@@ -141,7 +147,10 @@ export default function PaymentPage() {
           </div>
 
           <div className="flex flex-col gap-1.5 text-[11px]">
-            <div className="flex justify-between"><span className="text-[#8B6B6B]">€{draft.bundlePrice} × {draft.persons}</span><span>€{fmt(subtotal)}</span></div>
+            <div className="flex justify-between"><span className="text-[#8B6B6B]">€{draft.experiencePrice} × {draft.persons}</span><span>€{fmt(expSubtotal)}</span></div>
+            {addSub > 0 && (
+              <div className="flex justify-between"><span className="text-[#8B6B6B]">{t.extras}</span><span>€{fmt(addSub)}</span></div>
+            )}
             <div className="flex justify-between"><span className="text-[#8B6B6B]">{t.tax}</span><span>€{fmt(taxAmount)}</span></div>
           </div>
           <div className="flex justify-between pt-2.5 mt-1.5 border-t border-[#EDE4CF] text-[13px] font-semibold">
@@ -174,20 +183,20 @@ export default function PaymentPage() {
 }
 
 function PaymentForm({ draft, booking, total, slug, chateauName, lang, t }: {
-  draft: FullDraft
-  booking: BookingResult
-  total: number
-  slug: string
+  draft:      FullDraft
+  booking:    BookingResult
+  total:      number
+  slug:       string
   chateauName: string
-  lang: 'en' | 'fr'
+  lang:       'en' | 'fr'
   t: { or: string; cardDetails: string; pay: (n: number) => string; processing: string; freeCancellation: string }
 }) {
   const router = useRouter()
-  const stripe = useStripe()
+  const stripe  = useStripe()
   const elements = useElements()
   const [paymentRequest, setPaymentRequest] = useState<PaymentRequest | null>(null)
-  const [submitting, setSubmitting] = useState(false)
-  const [cardError, setCardError] = useState('')
+  const [submitting,     setSubmitting]     = useState(false)
+  const [cardError,      setCardError]      = useState('')
 
   function finish() {
     clearBookingDraft(slug)

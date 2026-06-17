@@ -5,7 +5,6 @@ import { useLanguage } from '@/context/LanguageContext'
 import { useBookingChateau } from '../layout'
 import { getBookingDraft, saveBookingDraft } from '@/lib/bookingDraft'
 import { supabase } from '@/lib/supabase'
-import { priceFrom } from '@/lib/pricing'
 
 export default function DetailsPage() {
   const router = useRouter()
@@ -13,45 +12,56 @@ export default function DetailsPage() {
   const { lang } = useLanguage()
   const { chateau } = useBookingChateau()
 
-  const [name, setName] = useState(() => getBookingDraft(slug).guestName ?? '')
-  const [email, setEmail] = useState(() => getBookingDraft(slug).guestEmail ?? '')
-  const [phone, setPhone] = useState(() => getBookingDraft(slug).guestPhone ?? '')
+  const [name,     setName]     = useState(() => getBookingDraft(slug).guestName ?? '')
+  const [email,    setEmail]    = useState(() => getBookingDraft(slug).guestEmail ?? '')
+  const [phone,    setPhone]    = useState(() => getBookingDraft(slug).guestPhone ?? '')
   const [requests, setRequests] = useState(() => getBookingDraft(slug).specialRequests ?? '')
-  const [summary] = useState<{ date: string; time: string; persons: number; bundleName?: string; bundlePrice?: number } | null>(() => {
+
+  const [summary] = useState<{
+    date: string; time: string; persons: number
+    experienceName?: string; experiencePrice?: number; addonsSubtotal?: number
+  } | null>(() => {
     const draft = getBookingDraft(slug)
-    if (!draft.visitDate || !draft.visitTime || !draft.persons || !draft.bundleId) return null
-    return { date: draft.visitDate, time: draft.visitTime, persons: draft.persons, bundleName: draft.bundleName, bundlePrice: draft.bundlePrice }
+    if (!draft.visitDate || !draft.visitTime || !draft.persons || !draft.experienceId) return null
+    return {
+      date:             draft.visitDate,
+      time:             draft.visitTime,
+      persons:          draft.persons,
+      experienceName:   draft.experienceName,
+      experiencePrice:  draft.experiencePrice,
+      addonsSubtotal:   draft.addonsSubtotal ?? 0,
+    }
   })
 
   useEffect(() => {
     const draft = getBookingDraft(slug)
-    if (!draft.visitDate || !draft.visitTime || !draft.persons || !draft.bundleId) {
-      router.replace(`/book/${slug}/bundle`)
+    if (!draft.visitDate || !draft.visitTime || !draft.persons || !draft.experienceId) {
+      router.replace(`/book/${slug}/experience`)
       return
     }
     supabase.auth.getUser().then(({ data }) => {
       const user = data.user
       if (!user) return
-      if (!draft.guestEmail && user.email) setEmail(user.email)
-      if (!draft.guestName && user.user_metadata?.full_name) setName(user.user_metadata.full_name)
+      if (!draft.guestEmail && user.email)                        setEmail(user.email)
+      if (!draft.guestName  && user.user_metadata?.full_name)     setName(user.user_metadata.full_name)
     })
   }, [slug, router])
 
   const t = {
-    title:    lang === 'fr' ? 'Vos coordonnées' : 'Your details',
-    sub:      lang === 'fr' ? 'Pour confirmer votre réservation' : 'To confirm your booking',
-    name:     lang === 'fr' ? 'Nom complet' : 'Full name',
-    namePh:   lang === 'fr' ? 'Jean Dupont' : 'Jane Doe',
-    email:    lang === 'fr' ? 'E-mail' : 'Email',
-    phone:    lang === 'fr' ? 'Téléphone' : 'Phone',
-    phonePh:  lang === 'fr' ? '+33 6 12 34 56 78' : '+1 555 123 4567',
-    requests: lang === 'fr' ? 'Demandes spéciales' : 'Special requests',
+    title:       lang === 'fr' ? 'Vos coordonnées' : 'Your details',
+    sub:         lang === 'fr' ? 'Pour confirmer votre réservation' : 'To confirm your booking',
+    name:        lang === 'fr' ? 'Nom complet' : 'Full name',
+    namePh:      lang === 'fr' ? 'Jean Dupont' : 'Jane Doe',
+    email:       lang === 'fr' ? 'E-mail' : 'Email',
+    phone:       lang === 'fr' ? 'Téléphone' : 'Phone',
+    phonePh:     lang === 'fr' ? '+33 6 12 34 56 78' : '+1 555 123 4567',
+    requests:    lang === 'fr' ? 'Demandes spéciales' : 'Special requests',
     requestsSub: lang === 'fr' ? '(optionnel)' : '(optional)',
-    requestsPh: lang === 'fr' ? 'Allergies, mobilité réduite, occasion spéciale…' : 'Allergies, accessibility needs, special occasion…',
-    continue: lang === 'fr' ? 'Continuer vers le paiement' : 'Continue to payment',
-    persons:  lang === 'fr' ? 'pers.' : 'guests',
-    total:    lang === 'fr' ? 'Total' : 'Total',
-    months: lang === 'fr'
+    requestsPh:  lang === 'fr' ? 'Allergies, mobilité réduite, occasion spéciale…' : 'Allergies, accessibility needs, special occasion…',
+    continue:    lang === 'fr' ? 'Continuer vers le paiement' : 'Continue to payment',
+    persons:     lang === 'fr' ? 'pers.' : 'guests',
+    total:       lang === 'fr' ? 'Total' : 'Total',
+    months:      lang === 'fr'
       ? ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.']
       : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
   }
@@ -62,9 +72,9 @@ export default function DetailsPage() {
   function handleContinue() {
     if (!canContinue) return
     saveBookingDraft(slug, {
-      guestName: name.trim(),
-      guestEmail: email.trim(),
-      guestPhone: phone.trim(),
+      guestName:       name.trim(),
+      guestEmail:      email.trim(),
+      guestPhone:      phone.trim(),
       specialRequests: requests.trim(),
     })
     router.push(`/book/${slug}/payment`)
@@ -79,8 +89,9 @@ export default function DetailsPage() {
   }
 
   const [y, m, d] = summary.date.split('-').map(Number)
-  const dateLabel = `${d} ${t.months[m - 1]} ${y}`
-  const total = summary.bundlePrice != null ? summary.bundlePrice * summary.persons : priceFrom(chateau.bundles)
+  const dateLabel  = `${d} ${t.months[m - 1]} ${y}`
+  const expSubtotal = (summary.experiencePrice ?? 0) * summary.persons
+  const total       = expSubtotal + (summary.addonsSubtotal ?? 0)
 
   return (
     <div className="px-4 py-4 pb-24">
@@ -90,7 +101,9 @@ export default function DetailsPage() {
       <div className="bg-white border border-[#DDD0B3] rounded-[10px] px-3 py-2.5 mb-4 flex items-center justify-between text-[10px]">
         <div className="text-[#5C1A1A]">
           <p className="font-medium">{dateLabel} · {summary.time}</p>
-          <p className="text-[#8B6B6B] mt-0.5 capitalize">{summary.bundleName} · {summary.persons} {t.persons}</p>
+          <p className="text-[#8B6B6B] mt-0.5 capitalize">
+            {summary.experienceName} · {summary.persons} {t.persons}
+          </p>
         </div>
         <p className="font-serif text-[14px] font-bold text-[#5C1A1A]">€{total}</p>
       </div>

@@ -1,27 +1,29 @@
 'use client'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useLanguage } from '@/context/LanguageContext'
 import { useBookingChateau } from '../layout'
 import { getBookingDraft, saveBookingDraft } from '@/lib/bookingDraft'
-import { priceFrom } from '@/lib/pricing'
 
-const OPEN_DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+interface SlotAvailability { time: string; capacity: number; booked: number; free: number }
+interface DateAvailability { status: 'past'|'blocked'|'closed'|'open'|'full'; slots: SlotAvailability[] }
+type MonthAvailability = Record<string, DateAvailability>
 
 function toISO(d: Date) {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function monthKey(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
 function getCalendarCells(viewMonth: Date) {
   const year = viewMonth.getFullYear()
   const month = viewMonth.getMonth()
-  const firstDay = new Date(year, month, 1)
+  const first = new Date(year, month, 1)
   const daysInMonth = new Date(year, month + 1, 0).getDate()
   const cells: (Date | null)[] = []
-  for (let i = 0; i < firstDay.getDay(); i++) cells.push(null)
+  for (let i = 0; i < first.getDay(); i++) cells.push(null)
   for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d))
   while (cells.length % 7 !== 0) cells.push(null)
   return cells
@@ -34,10 +36,12 @@ export default function DatesPage() {
   const { chateau } = useBookingChateau()
 
   const today = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d }, [])
-  const minSelectable = useMemo(() => { const d = new Date(today); d.setDate(d.getDate() + 1); return d }, [today])
   const maxMonth = useMemo(() => new Date(today.getFullYear(), today.getMonth() + 6, 1), [today])
 
-  const [viewMonth, setViewMonth] = useState(() => {
+  const [expMaxGuests] = useState(() => getBookingDraft(slug).experienceMaxGuests ?? 12)
+  const [expPrice]     = useState(() => getBookingDraft(slug).experiencePrice ?? 0)
+
+  const [viewMonth,     setViewMonth]     = useState<Date>(() => {
     const draft = getBookingDraft(slug)
     if (draft.visitDate) {
       const [y, m] = draft.visitDate.split('-').map(Number)
@@ -47,17 +51,49 @@ export default function DatesPage() {
   })
   const [selectedDate, setSelectedDate] = useState<string | null>(() => getBookingDraft(slug).visitDate ?? null)
   const [selectedTime, setSelectedTime] = useState<string | null>(() => getBookingDraft(slug).visitTime ?? null)
-  const [persons, setPersons] = useState(() => getBookingDraft(slug).persons ?? 2)
+  const [persons,      setPersons]      = useState(() => getBookingDraft(slug).persons ?? 2)
+  const [availability, setAvailability] = useState<MonthAvailability>({})
+  const [loadingMonth, setLoadingMonth] = useState(false)
+
+  const availCache = useRef<Map<string, MonthAvailability>>(new Map())
+
+  // Guard: must have chosen an experience first
+  useEffect(() => {
+    if (!getBookingDraft(slug).experienceId) {
+      router.replace(`/book/${slug}/experience`)
+    }
+  }, [slug, router])
+
+  // Fetch availability for the viewed month
+  useEffect(() => {
+    const key = monthKey(viewMonth)
+    if (availCache.current.has(key)) {
+      setAvailability(availCache.current.get(key)!)
+      return
+    }
+    setLoadingMonth(true)
+    fetch(`/api/chateaux/${slug}/availability?month=${key}`)
+      .then(r => r.json())
+      .then(data => {
+        const dates = (data.dates ?? {}) as MonthAvailability
+        availCache.current.set(key, dates)
+        setAvailability(dates)
+        setLoadingMonth(false)
+      })
+      .catch(() => setLoadingMonth(false))
+  }, [slug, viewMonth])
 
   const t = {
-    title:    lang === 'fr' ? 'Choisissez une date' : 'Choose a date',
-    timeLbl:  lang === 'fr' ? 'Heure de la visite' : 'Visit time',
-    guests:   lang === 'fr' ? 'Voyageurs' : 'Guests',
-    persons:  lang === 'fr' ? 'Personnes' : 'Persons',
-    person:   lang === 'fr' ? 'personne' : 'person',
-    estTotal: lang === 'fr' ? 'Total estimé' : 'Estimated total',
-    continue: lang === 'fr' ? 'Continuer' : 'Continue',
-    perPerson:lang === 'fr' ? '/pers.' : '/person',
+    title:     lang === 'fr' ? 'Choisissez une date' : 'Choose a date',
+    timeLbl:   lang === 'fr' ? 'Heure de la visite' : 'Visit time',
+    pickDate:  lang === 'fr' ? 'Sélectionnez une date' : 'Select a date first',
+    seats:     lang === 'fr' ? 'places' : 'seats',
+    full:      lang === 'fr' ? 'Complet' : 'Full',
+    guests:    lang === 'fr' ? 'Voyageurs' : 'Guests',
+    persons:   lang === 'fr' ? 'Personnes' : 'Persons',
+    estTotal:  lang === 'fr' ? 'Total estimé' : 'Estimated total',
+    continue:  lang === 'fr' ? 'Continuer' : 'Continue',
+    perPerson: lang === 'fr' ? '/pers.' : '/person',
     months: lang === 'fr'
       ? ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
       : ['January','February','March','April','May','June','July','August','September','October','November','December'],
@@ -66,43 +102,54 @@ export default function DatesPage() {
 
   const cells = useMemo(() => getCalendarCells(viewMonth), [viewMonth])
 
-  const isDateDisabled = (d: Date) => {
-    if (d < minSelectable) return true
-    if (chateau?.open_days?.length) {
-      if (!chateau.open_days.includes(OPEN_DAY_KEYS[d.getDay()])) return true
+  const isCurrentMonth = viewMonth.getFullYear() === today.getFullYear() && viewMonth.getMonth() === today.getMonth()
+  const isMaxMonth     = viewMonth.getFullYear() === maxMonth.getFullYear() && viewMonth.getMonth() === maxMonth.getMonth()
+
+  function handleSelectDate(iso: string) {
+    setSelectedDate(iso)
+    if (selectedTime) {
+      const slots = availability[iso]?.slots ?? []
+      const stillAvail = slots.some(s => s.time === selectedTime && s.free > 0)
+      if (!stillAvail) setSelectedTime(null)
     }
-    return false
   }
 
-  const timeSlots = useMemo(() => {
-    if (!chateau) return []
-    const [oh, om] = chateau.open_time.split(':').map(Number)
-    const [ch, cm] = chateau.close_time.split(':').map(Number)
-    const closeMin = ch * 60 + (cm || 0)
-    let cur = oh * 60 + (om || 0)
-    const slots: string[] = []
-    while (cur + 60 <= closeMin && slots.length < 4) {
-      const h = Math.floor(cur / 60), m = cur % 60
-      slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`)
-      cur += 90
+  function handleSelectTime(time: string) {
+    setSelectedTime(time)
+    const slot = availability[selectedDate!]?.slots.find(s => s.time === time)
+    if (slot) {
+      const newMax = Math.min(expMaxGuests, slot.free)
+      setPersons(p => Math.min(p, newMax))
     }
-    return slots.length ? slots : ['10:00', '11:30', '14:00']
-  }, [chateau])
+  }
 
-  const isCurrentMonth = viewMonth.getFullYear() === today.getFullYear() && viewMonth.getMonth() === today.getMonth()
-  const isMaxMonth = viewMonth.getFullYear() === maxMonth.getFullYear() && viewMonth.getMonth() === maxMonth.getMonth()
+  const currentSlot = useMemo(() => {
+    if (!selectedDate || !selectedTime) return null
+    return availability[selectedDate]?.slots.find(s => s.time === selectedTime) ?? null
+  }, [availability, selectedDate, selectedTime])
 
-  const maxPersons = chateau?.bundles?.length ? Math.max(...chateau.bundles.map(b => b.max_persons)) : 12
+  const maxPersons = useMemo(() => {
+    if (!currentSlot) return expMaxGuests
+    return Math.min(expMaxGuests, currentSlot.free)
+  }, [expMaxGuests, currentSlot])
 
-  const from = priceFrom(chateau?.bundles ?? null)
-  const estTotal = from !== null ? from * persons : null
+  const timeSlots = useMemo<SlotAvailability[]>(() => {
+    if (!selectedDate || !availability[selectedDate]) return []
+    return availability[selectedDate].slots
+  }, [availability, selectedDate])
 
-  const canContinue = !!selectedDate && !!selectedTime
+  const estTotal = expPrice > 0 ? expPrice * persons : null
+  const canContinue = !!selectedDate && !!selectedTime && persons > 0
 
   function handleContinue() {
     if (!canContinue) return
-    saveBookingDraft(slug, { visitDate: selectedDate!, visitTime: selectedTime!, persons })
-    router.push(`/book/${slug}/bundle`)
+    saveBookingDraft(slug, {
+      visitDate:    selectedDate!,
+      visitTime:    selectedTime!,
+      persons,
+      slotCapacity: currentSlot?.capacity ?? 12,
+    })
+    router.push(`/book/${slug}/addons`)
   }
 
   if (!chateau) {
@@ -117,7 +164,7 @@ export default function DatesPage() {
     <div className="px-4 py-4 pb-24">
       <h1 className="font-serif text-[15px] text-[#1C0A0A] font-medium mb-3">{t.title}</h1>
 
-      <div className="bg-white border border-[#DDD0B3] rounded-[10px] p-3 mb-4">
+      <div className={`bg-white border border-[#DDD0B3] rounded-[10px] p-3 mb-4 transition-opacity ${loadingMonth ? 'opacity-60' : 'opacity-100'}`}>
         <div className="flex items-center justify-between mb-2">
           <button onClick={() => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1))}
             disabled={isCurrentMonth}
@@ -143,17 +190,26 @@ export default function DatesPage() {
         <div className="grid grid-cols-7 gap-1">
           {cells.map((d, i) => {
             if (!d) return <div key={i} />
-            const iso = toISO(d)
-            const disabled = isDateDisabled(d)
+            const iso    = toISO(d)
+            const info   = availability[iso]
+            const status = info?.status
+            const disabled = !status || status === 'past' || status === 'blocked' || status === 'closed' || status === 'full'
             const selected = selectedDate === iso
             return (
-              <button key={i} disabled={disabled} onClick={() => setSelectedDate(iso)}
-                className={`aspect-square rounded-lg text-[11px] font-medium transition-all ${
-                  selected ? 'bg-[#5C1A1A] text-white'
-                  : disabled ? 'text-[#DDD0B3] cursor-not-allowed'
-                  : 'text-[#1C0A0A] hover:bg-[#FAF6EE] border border-transparent hover:border-[#DDD0B3]'
+              <button key={i} disabled={disabled} onClick={() => handleSelectDate(iso)}
+                className={`aspect-square rounded-lg text-[11px] font-medium transition-all relative ${
+                  selected
+                    ? 'bg-[#5C1A1A] text-white'
+                    : status === 'full'
+                    ? 'text-[#DDD0B3] cursor-not-allowed'
+                    : disabled
+                    ? 'text-[#DDD0B3] cursor-not-allowed'
+                    : 'text-[#1C0A0A] hover:bg-[#FAF6EE] border border-transparent hover:border-[#DDD0B3]'
                 }`}>
                 {d.getDate()}
+                {status === 'full' && !selected && (
+                  <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 text-[5px] text-[#C4963A]">●</span>
+                )}
               </button>
             )
           })}
@@ -161,16 +217,29 @@ export default function DatesPage() {
       </div>
 
       <p className="text-[9px] font-medium text-[#8B6B6B] uppercase tracking-wider mb-2">{t.timeLbl}</p>
-      <div className="flex gap-2 mb-4">
-        {timeSlots.map(time => (
-          <button key={time} onClick={() => setSelectedTime(time)}
-            className={`flex-1 py-2.5 rounded-lg text-[11px] border transition-all ${
-              selectedTime === time ? 'bg-[#5C1A1A] text-white border-[#5C1A1A]' : 'bg-white text-[#5C1A1A] border-[#DDD0B3]'
-            }`}>
-            {time}
-          </button>
-        ))}
-      </div>
+      {timeSlots.length === 0 ? (
+        <p className="text-[11px] text-[#8B6B6B] mb-4 py-2">{t.pickDate}</p>
+      ) : (
+        <div className="flex flex-col gap-2 mb-4">
+          {timeSlots.map(slot => (
+            <button key={slot.time}
+              disabled={slot.free === 0}
+              onClick={() => handleSelectTime(slot.time)}
+              className={`flex items-center justify-between px-4 py-2.5 rounded-lg border transition-all ${
+                selectedTime === slot.time
+                  ? 'bg-[#5C1A1A] text-white border-[#5C1A1A]'
+                  : slot.free === 0
+                  ? 'bg-white text-[#DDD0B3] border-[#EDE4CF] cursor-not-allowed'
+                  : 'bg-white text-[#5C1A1A] border-[#DDD0B3] hover:border-[#5C1A1A]'
+              }`}>
+              <span className="text-[12px] font-medium">{slot.time}</span>
+              <span className={`text-[10px] ${selectedTime === slot.time ? 'text-white/70' : 'text-[#8B6B6B]'}`}>
+                {slot.free === 0 ? t.full : `${slot.free} ${t.seats}`}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
 
       <p className="text-[9px] font-medium text-[#8B6B6B] uppercase tracking-wider mb-2">{t.guests}</p>
       <div className="bg-white border border-[#DDD0B3] rounded-lg px-4 py-3 flex items-center justify-between mb-4">
@@ -193,7 +262,7 @@ export default function DatesPage() {
           <p className="text-[8px] text-[#8B6B6B] uppercase tracking-wider">{t.estTotal}</p>
           <p className="font-serif text-[15px] font-bold text-[#5C1A1A]">
             {estTotal !== null ? `€${estTotal}` : '—'}
-            {from !== null && <span className="text-[9px] text-[#8B6B6B] font-sans"> (€{from}{t.perPerson})</span>}
+            {expPrice > 0 && <span className="text-[9px] text-[#8B6B6B] font-sans"> (€{expPrice}{t.perPerson})</span>}
           </p>
         </div>
         <button onClick={handleContinue} disabled={!canContinue}

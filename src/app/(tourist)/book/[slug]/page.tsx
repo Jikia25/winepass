@@ -7,7 +7,7 @@ export default function BookingEntryPage() {
   const { slug } = useParams<{ slug: string }>()
 
   useEffect(() => {
-    router.replace(`/book/${slug}/dates`)
+    router.replace(`/book/${slug}/experience`)
   }, [slug, router])
 
   return (

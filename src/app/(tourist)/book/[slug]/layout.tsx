@@ -4,24 +4,30 @@ import { useParams, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useLanguage } from '@/context/LanguageContext'
 import { getChateau } from '@/lib/db'
-import type { ChateauFull } from '@/types/database'
+import { supabase } from '@/lib/supabase'
+import type { ChateauFull, ExperienceAddon } from '@/types/database'
 
 interface ChateauCtx {
-  chateau: ChateauFull | null
-  loading: boolean
+  chateau:      ChateauFull | null
+  loading:      boolean
+  addons:       ExperienceAddon[]
+  addonsLoaded: boolean
 }
 
-const ChateauContext = createContext<ChateauCtx>({ chateau: null, loading: true })
+const ChateauContext = createContext<ChateauCtx>({ chateau: null, loading: true, addons: [], addonsLoaded: false })
 export const useBookingChateau = () => useContext(ChateauContext)
 
-const STEPS = ['dates', 'bundle', 'details', 'payment'] as const
+const STEPS = ['experience', 'dates', 'addons', 'details', 'payment'] as const
 
 export default function BookingLayout({ children }: { children: React.ReactNode }) {
   const { slug } = useParams<{ slug: string }>()
   const pathname = usePathname()
   const { lang } = useLanguage()
-  const [chateau, setChateau] = useState<ChateauFull | null>(null)
-  const [loading, setLoading] = useState(true)
+
+  const [chateau, setChateau]           = useState<ChateauFull | null>(null)
+  const [loading, setLoading]           = useState(true)
+  const [addons, setAddons]             = useState<ExperienceAddon[]>([])
+  const [addonsLoaded, setAddonsLoaded] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -29,27 +35,38 @@ export default function BookingLayout({ children }: { children: React.ReactNode 
       if (!active) return
       setChateau(c)
       setLoading(false)
+      if (!c?.id) { setAddonsLoaded(true); return }
+      supabase
+        .from('experience_addons')
+        .select('*')
+        .eq('chateau_id', c.id)
+        .eq('is_active', true)
+        .then(({ data }) => {
+          if (!active) return
+          setAddons((data as ExperienceAddon[]) ?? [])
+          setAddonsLoaded(true)
+        })
     })
     return () => { active = false }
   }, [slug])
 
-  const isConfirm = pathname.includes('/confirm/')
+  const isConfirm   = pathname.includes('/confirm/')
   const currentStep = STEPS.findIndex(s => pathname.endsWith(`/${s}`))
 
   const stepLabels = lang === 'fr'
-    ? ['Dates', 'Formule', 'Coordonnées', 'Paiement']
-    : ['Dates', 'Bundle', 'Details', 'Payment']
+    ? ['Expérience', 'Dates', 'Extras', 'Infos', 'Paiement']
+    : ['Experience', 'Dates', 'Extras', 'Details', 'Payment']
 
   if (isConfirm) {
     return (
-      <ChateauContext.Provider value={{ chateau, loading }}>
+      <ChateauContext.Provider value={{ chateau, loading, addons, addonsLoaded }}>
         <div className="min-h-screen bg-[#FAF6EE]">{children}</div>
       </ChateauContext.Provider>
     )
   }
 
   return (
-    <ChateauContext.Provider value={{ chateau, loading }}>
+    <ChateauContext.Provider value={{ chateau, loading, addons, addonsLoaded }}>
       <div className="min-h-screen bg-[#FAF6EE]">
         <div className="bg-[#3D0F0F] px-4 py-3 flex items-center gap-3">
           <Link href={`/chateau/${slug}`} className="text-white/60 hover:text-white text-[16px] flex-shrink-0">←</Link>

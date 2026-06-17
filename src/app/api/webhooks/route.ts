@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     if (ref) {
       // @ts-ignore
       const { data: booking } = await supabaseAdmin
-        .from('bookings').update({ status:'confirmed', paid_at: new Date().toISOString() })
+        .from('bookings').update({ status:'confirmed', paid_at: new Date().toISOString(), hold_expires_at: null })
         .eq('booking_ref', ref).select().single()
       if (booking) {
         // @ts-ignore
