@@ -94,10 +94,13 @@ export interface Database {
           guest_phone: string | null
           special_requests: string | null
           chateau_id: string
-          bundle_id: string
+          bundle_id: string | null
+          experience_id: string | null
           visit_date: string
           visit_time: string
           persons: number
+          guests_count: number | null
+          selected_addons: unknown[] | null
           language: string
           ai_wine_style: string | null
           ai_budget: number | null
@@ -105,6 +108,7 @@ export interface Database {
           price_per_person: number
           total_price: number
           tax_amount: number
+          commission_amount: number | null
           currency: string
           status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'refunded'
           stripe_payment_intent: string | null
@@ -114,6 +118,9 @@ export interface Database {
           cancellation_deadline: string | null
           cancelled_at: string | null
           cancel_reason: string | null
+          hold_expires_at: string | null
+          reminder_sent_at: string | null
+          review_request_sent_at: string | null
           created_at: string
           updated_at: string
         }
@@ -207,6 +214,62 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['chateau_availability']['Row'], 'id'>
         Update: Partial<Database['public']['Tables']['chateau_availability']['Insert']>
       }
+      experiences: {
+        Row: {
+          id: string
+          chateau_id: string
+          name_en: string
+          name_fr: string
+          description_en: string | null
+          description_fr: string | null
+          price_per_person: number
+          duration_minutes: number
+          max_guests: number
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['experiences']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['experiences']['Insert']>
+      }
+      experience_addons: {
+        Row: {
+          id: string
+          chateau_id: string
+          name_en: string
+          name_fr: string
+          price: number
+          price_type: 'per_person' | 'per_booking'
+          is_active: boolean
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['experience_addons']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['experience_addons']['Insert']>
+      }
+      chateau_schedule: {
+        Row: {
+          id: string
+          chateau_id: string
+          day_of_week: number
+          is_open: boolean
+          time_slots: string[]
+          slot_capacity: number
+          is_active: boolean
+        }
+        Insert: Omit<Database['public']['Tables']['chateau_schedule']['Row'], 'id'>
+        Update: Partial<Database['public']['Tables']['chateau_schedule']['Insert']>
+      }
+      chateau_blocked_dates: {
+        Row: {
+          id: string
+          chateau_id: string
+          blocked_date: string
+          reason: string | null
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['chateau_blocked_dates']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['chateau_blocked_dates']['Insert']>
+      }
     }
     Functions: {
       chateaux_nearby: {
@@ -235,6 +298,10 @@ export type CorporateInquiry = Database['public']['Tables']['corporate_inquiries
 export type Stamp           = Database['public']['Tables']['wine_passport_stamps']['Row']
 export type Review          = Database['public']['Tables']['reviews']['Row']
 export type Availability    = Database['public']['Tables']['chateau_availability']['Row']
+export type Experience      = Database['public']['Tables']['experiences']['Row']
+export type ExperienceAddon = Database['public']['Tables']['experience_addons']['Row']
+export type ChateauSchedule = Database['public']['Tables']['chateau_schedule']['Row']
+export type BlockedDate     = Database['public']['Tables']['chateau_blocked_dates']['Row']
 
 // ── Enriched types (with relations) ──────────────────────────
 export type ChateauWithAppellation = Chateau & {
