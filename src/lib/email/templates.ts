@@ -276,7 +276,7 @@ export interface ReviewRequestParams {
 export function reviewRequestEmail(p: ReviewRequestParams): { subject: string; html: string } {
   const isFr      = p.lang === 'fr'
   const name      = p.guestName ?? (isFr ? 'cher client' : 'there')
-  const reviewUrl = `${p.siteUrl}/chateaux/${p.chateauSlug}?review=1&ref=${encodeURIComponent(p.bookingRef)}`
+  const reviewUrl = `${p.siteUrl}/review/${encodeURIComponent(p.bookingRef)}`
 
   const subject = isFr
     ? `Comment s’est passée votre visite au ${p.chateauName} ?`
