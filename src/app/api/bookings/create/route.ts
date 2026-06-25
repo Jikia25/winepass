@@ -96,7 +96,18 @@ export async function POST(req: NextRequest) {
     const taxAmount        = Math.round(subtotal * 0.10 * 100) / 100
     const total            = subtotal + taxAmount
 
-    // 5. Generate booking ref + create PaymentIntent
+    // 5a. Verify userId exists in public.users (which the FK references) — fall back to null if stale/unknown
+    let verifiedUserId: string | null = null
+    if (userId) {
+      const { data: userRow } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .eq('id', userId)
+        .maybeSingle()
+      verifiedUserId = userRow?.id ?? null
+    }
+
+    // 5b. Generate booking ref + create PaymentIntent
     const { data: bookingRef } = await supabaseAdmin
       .rpc('generate_booking_ref', { chateau_slug: chateau.slug })
 
@@ -124,7 +135,7 @@ export async function POST(req: NextRequest) {
       .from('bookings')
       .insert({
         booking_ref:           bookingRef as string,
-        user_id:               userId ?? null,
+        user_id:               verifiedUserId,
         guest_name:            guestName ?? null,
         guest_email:           guestEmail,
         guest_phone:           guestPhone ?? null,
@@ -156,9 +167,10 @@ export async function POST(req: NextRequest) {
       bookingRef, bookingId: booking?.id, clientSecret: paymentIntent.client_secret,
       expSubtotal, addonsSubtotal, taxAmount, total, commissionAmount,
     })
-  } catch (err) {
+  } catch (err: unknown) {
+    const pg = err as { code?: string; message?: string }
     console.error('[Booking Create Error]', err)
-    const message = err instanceof Error ? err.message : 'Booking failed'
+    const message = pg?.message ?? (err instanceof Error ? err.message : 'Booking failed')
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
